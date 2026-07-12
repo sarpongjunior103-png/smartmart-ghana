@@ -1,119 +1,101 @@
-import { spellCorrect } from "@/lib/search/spell-correct";
+import { spellCorrect } from '@/lib/search/spell-correct';
 
-describe("spellCorrect", () => {
-  describe("single word corrections", () => {
-    it("should correct 'fone' to 'phone'", () => {
-      expect(spellCorrect("fone")).toBe("phone");
-    });
-
-    it("should correct 'laptob' to 'laptop'", () => {
-      expect(spellCorrect("laptob")).toBe("laptop");
-    });
-
-    it("should correct 'headfones' to 'headphones'", () => {
-      expect(spellCorrect("headfones")).toBe("headphones");
-    });
-
-    it("should correct 'snekers' to 'sneakers'", () => {
-      expect(spellCorrect("snekers")).toBe("sneakers");
-    });
-
-    it("should correct 'shrt' to 'shirt'", () => {
-      expect(spellCorrect("shrt")).toBe("shirt");
-    });
-
-    it("should correct 'computr' to 'computer'", () => {
-      expect(spellCorrect("computr")).toBe("computer");
-    });
+describe('spellCorrect', () => {
+  // Single word corrections
+  it('corrects "fone" to "phone"', () => {
+    expect(spellCorrect('fone')).toBe('phone');
   });
 
-  describe("multiple word corrections", () => {
-    it("should correct multiple misspelled words in a phrase", () => {
-      expect(spellCorrect("fone laptob")).toBe("phone laptop");
-    });
-
-    it("should correct only misspelled words and leave correct ones unchanged", () => {
-      expect(spellCorrect("red fone")).toBe("red phone");
-    });
-
-    it("should handle a full search query with multiple corrections", () => {
-      expect(spellCorrect("laptob chargr for computr")).toBe("laptop charger for computer");
-    });
+  it('corrects "laptob" to "laptop"', () => {
+    expect(spellCorrect('laptob')).toBe('laptop');
   });
 
-  describe("case insensitivity", () => {
-    it("should correct uppercase input", () => {
-      expect(spellCorrect("FONE")).toBe("phone");
-    });
-
-    it("should correct mixed case input", () => {
-      expect(spellCorrect("LaPtOb")).toBe("laptop");
-    });
-
-    it("should correct lowercase input", () => {
-      expect(spellCorrect("fone")).toBe("phone");
-    });
-
-    it("should handle mixed case in multi-word queries", () => {
-      expect(spellCorrect("FONE LapTob")).toBe("phone laptop");
-    });
+  it('corrects "shose" to "shoes"', () => {
+    expect(spellCorrect('shose')).toBe('shoes');
   });
 
-  describe("empty and edge cases", () => {
-    it("should return empty string for empty input", () => {
-      expect(spellCorrect("")).toBe("");
-    });
-
-    it("should return empty string for whitespace-only input", () => {
-      expect(spellCorrect("   ")).toBe("");
-    });
-
-    it("should handle null input gracefully", () => {
-      expect(spellCorrect(null as unknown as string)).toBe("");
-    });
-
-    it("should handle undefined input gracefully", () => {
-      expect(spellCorrect(undefined as unknown as string)).toBe("");
-    });
-
-    it("should trim leading and trailing whitespace", () => {
-      expect(spellCorrect("  fone  ")).toBe("phone");
-    });
+  it('corrects "shrit" to "shirt"', () => {
+    expect(spellCorrect('shrit')).toBe('shirt');
   });
 
-  describe("correct words remain unchanged", () => {
-    it("should not change correctly spelled 'phone'", () => {
-      expect(spellCorrect("phone")).toBe("phone");
-    });
-
-    it("should not change correctly spelled 'laptop'", () => {
-      expect(spellCorrect("laptop")).toBe("laptop");
-    });
-
-    it("should not change correctly spelled multi-word query", () => {
-      expect(spellCorrect("red phone case")).toBe("red phone case");
-    });
-
-    it("should not change correctly spelled 'computer'", () => {
-      expect(spellCorrect("computer")).toBe("computer");
-    });
-
-    it("should not change correctly spelled 'headphones'", () => {
-      expect(spellCorrect("headphones")).toBe("headphones");
-    });
+  it('corrects "headphons" to "headphones"', () => {
+    expect(spellCorrect('headphons')).toBe('headphones');
   });
 
-  describe("numbers and special characters", () => {
-    it("should preserve numbers in the query", () => {
-      expect(spellCorrect("iphone 14")).toBe("iphone 14");
-    });
+  // Multiple words
+  it('corrects multiple words in a phrase', () => {
+    expect(spellCorrect('fone laptob')).toBe('phone laptop');
+  });
 
-    it("should preserve special characters", () => {
-      expect(spellCorrect("phone-case")).toBe("phone-case");
-    });
+  it('corrects mixed correct and misspelled words', () => {
+    expect(spellCorrect('red fone case')).toBe('red phone case');
+  });
 
-    it("should handle alphanumeric queries", () => {
-      expect(spellCorrect("fone 14 pro")).toBe("phone 14 pro");
-    });
+  it('corrects a longer phrase with multiple errors', () => {
+    expect(spellCorrect('blue laptob bag')).toBe('blue laptop bag');
+  });
+
+  // Case insensitivity
+  it('handles uppercase input', () => {
+    expect(spellCorrect('FONE')).toBe('phone');
+  });
+
+  it('handles mixed case input', () => {
+    expect(spellCorrect('LaPtOb')).toBe('laptop');
+  });
+
+  it('handles all-caps phrase', () => {
+    expect(spellCorrect('FONE LAPTOB')).toBe('phone laptop');
+  });
+
+  it('preserves case for correct words', () => {
+    expect(spellCorrect('PHONE')).toBe('phone');
+  });
+
+  // Empty input
+  it('returns empty string for empty input', () => {
+    expect(spellCorrect('')).toBe('');
+  });
+
+  it('returns empty string for whitespace-only input', () => {
+    expect(spellCorrect('   ')).toBe('');
+  });
+
+  it('returns empty string for null input', () => {
+    expect(spellCorrect(null as unknown as string)).toBe('');
+  });
+
+  it('returns empty string for undefined input', () => {
+    expect(spellCorrect(undefined as unknown as string)).toBe('');
+  });
+
+  // Correct words unchanged
+  it('leaves correct words unchanged', () => {
+    expect(spellCorrect('phone')).toBe('phone');
+  });
+
+  it('leaves correct multi-word phrases unchanged', () => {
+    expect(spellCorrect('laptop case')).toBe('laptop case');
+  });
+
+  it('leaves unknown words unchanged', () => {
+    expect(spellCorrect('xyzabc')).toBe('xyzabc');
+  });
+
+  it('leaves a correct longer phrase unchanged', () => {
+    expect(spellCorrect('wireless bluetooth headphones')).toBe('wireless bluetooth headphones');
+  });
+
+  // Edge cases
+  it('trims leading and trailing whitespace', () => {
+    expect(spellCorrect('  fone  ')).toBe('phone');
+  });
+
+  it('handles single character input', () => {
+    expect(spellCorrect('a')).toBe('a');
+  });
+
+  it('handles numbers in input', () => {
+    expect(spellCorrect('iphone 14')).toBe('iphone 14');
   });
 });

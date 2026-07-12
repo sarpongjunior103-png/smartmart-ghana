@@ -1,77 +1,94 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// ============================================================================
+// Send Email Edge Function
+// Powered by Resend API — 9 branded HTML templates
+// ============================================================================
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
 };
 
-function getEnv(key: string): string {
-  return Deno.env.get(key) ?? "";
+// Contact info
+const CONTACT_PHONE = "+233 55 162 1261";
+const CONTACT_PHONE_RAW = "+233551621261";
+const CONTACT_EMAIL = "smartmart304@gmail.com";
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      ...corsHeaders,
+    },
+  });
+}
+
+function getEnv(name: string, fallback = ""): string {
+  return Deno.env.get(name) || fallback;
 }
 
 // ============================================================================
-// SmartMart Ghana — Email Template Engine
+// Branded Email Footer
 // ============================================================================
 
-const BRAND = {
-  name: "SmartMart Ghana",
-  primaryColor: "#0F766E",
-  primaryDark: "#0B5C56",
-  primaryLight: "#E6F4F1",
-  accentColor: "#F59E0B",
-  textColor: "#1F2937",
-  textMuted: "#6B7280",
-  backgroundColor: "#F9FAFB",
-  borderColor: "#E5E7EB",
-  whiteColor: "#FFFFFF",
-  footerColor: "#6B7280",
-  url: "https://smartmartghana.com",
-  supportEmail: "support@smartmartghana.com",
-};
+function emailFooter(): string {
+  return `
+    <tr>
+      <td style="padding: 32px 40px; background-color: #1a1a2e; border-radius: 0 0 8px 8px;">
+        <p style="margin: 0 0 12px 0; color: #ffffff; font-size: 14px; font-weight: 600; font-family: Arial, sans-serif;">
+          SmartMart
+        </p>
+        <p style="margin: 0 0 8px 0; color: #a0a0b8; font-size: 13px; font-family: Arial, sans-serif;">
+          Need help? Contact our support team:
+        </p>
+        <p style="margin: 0 0 4px 0; color: #a0a0b8; font-size: 13px; font-family: Arial, sans-serif;">
+          📞 Phone: <a href="tel:${CONTACT_PHONE_RAW}" style="color: #4f9eff; text-decoration: none;">${CONTACT_PHONE}</a>
+        </p>
+        <p style="margin: 0 0 16px 0; color: #a0a0b8; font-size: 13px; font-family: Arial, sans-serif;">
+          ✉️ Email: <a href="mailto:${CONTACT_EMAIL}" style="color: #4f9eff; text-decoration: none;">${CONTACT_EMAIL}</a>
+        </p>
+        <p style="margin: 0; padding-top: 16px; border-top: 1px solid #2a2a4e; color: #6a6a8a; font-size: 12px; font-family: Arial, sans-serif;">
+          © ${new Date().getFullYear()} SmartMart. All rights reserved.<br/>
+          You received this email because you have an account with SmartMart.
+        </p>
+      </td>
+    </tr>
+  `;
+}
 
-function baseTemplate(content: string, preview: string = "SmartMart Ghana"): string {
+function emailWrapper(content: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="${preview}">
-  <title>${preview}</title>
+  <title>SmartMart Email</title>
 </head>
-<body style="margin:0;padding:0;background-color:${BRAND.backgroundColor};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:${BRAND.textColor};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.backgroundColor};">
+<body style="margin: 0; padding: 0; background-color: #f4f4f7;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f7; padding: 40px 0;">
     <tr>
-      <td align="center" style="padding:24px 12px;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:${BRAND.whiteColor};border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
-          <!-- Header -->
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow: hidden;">
+          <!-- Logo Header -->
           <tr>
-            <td style="background-color:${BRAND.primaryColor};padding:28px 40px;text-align:center;">
-              <h1 style="margin:0;color:${BRAND.whiteColor};font-size:24px;font-weight:700;letter-spacing:-0.3px;">${BRAND.name}</h1>
-              <p style="margin:6px 0 0;color:${BRAND.primaryLight};font-size:13px;">Ghana's Smart Marketplace</p>
+            <td style="padding: 32px 40px; background-color: #4f46e5; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; font-family: Arial, sans-serif; letter-spacing: 0.5px;">
+                🛒 SmartMart
+              </h1>
             </td>
           </tr>
           <!-- Content -->
           <tr>
-            <td style="padding:40px 40px 20px;">
+            <td style="padding: 40px;">
               ${content}
             </td>
           </tr>
-          <!-- Footer -->
-          <tr>
-            <td style="padding:24px 40px 32px;border-top:1px solid ${BRAND.borderColor};background-color:${BRAND.backgroundColor};">
-              <p style="margin:0 0 8px;color:${BRAND.footerColor};font-size:13px;text-align:center;">
-                <a href="${BRAND.url}" style="color:${BRAND.primaryColor};text-decoration:none;font-weight:600;">${BRAND.url}</a>
-              </p>
-              <p style="margin:0 0 4px;color:${BRAND.footerColor};font-size:12px;text-align:center;">
-                Questions? Contact us at <a href="mailto:${BRAND.supportEmail}" style="color:${BRAND.primaryColor};text-decoration:none;">${BRAND.supportEmail}</a>
-              </p>
-              <p style="margin:8px 0 0;color:${BRAND.footerColor};font-size:11px;text-align:center;">
-                &copy; ${new Date().getFullYear()} ${BRAND.name}. All rights reserved.<br>
-                Accra, Ghana &middot; This email was sent to you by ${BRAND.name}.
-              </p>
-            </td>
-          </tr>
+          ${emailFooter()}
         </table>
       </td>
     </tr>
@@ -80,388 +97,402 @@ function baseTemplate(content: string, preview: string = "SmartMart Ghana"): str
 </html>`;
 }
 
-function button(text: string, href: string): string {
-  return `<a href="${href}" style="display:inline-block;background-color:${BRAND.primaryColor};color:${BRAND.whiteColor};padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">${text}</a>`;
-}
-
-function divider(): string {
-  return `<hr style="border:none;border-top:1px solid ${BRAND.borderColor};margin:24px 0;">`;
-}
-
-function infoBox(label: string, value: string): string {
-  return `<tr><td style="padding:8px 0;color:${BRAND.textMuted};font-size:14px;width:50%;vertical-align:top;">${label}</td><td style="padding:8px 0;color:${BRAND.textColor};font-size:14px;font-weight:600;vertical-align:top;">${value}</td></tr>`;
-}
-
 // ============================================================================
-// Template Definitions
+// Email Templates
 // ============================================================================
 
-type TemplateData = Record<string, unknown>;
+interface EmailTemplate {
+  subject: string;
+  html: string;
+}
 
-const templates: Record<string, (data: TemplateData) => string> = {
-  welcome: (data) => {
-    const name = String(data.name || "there");
-    return baseTemplate(`
-      <h2 style="margin:0 0 16px;color:${BRAND.textColor};font-size:22px;">Welcome to ${BRAND.name}, ${name}! 🎉</h2>
-      <p style="margin:0 0 16px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        We're thrilled to have you join Ghana's smartest marketplace. At ${BRAND.name}, you can shop from
-        thousands of verified vendors across the country, enjoy secure payments, and get your orders
-        delivered right to your doorstep.
+function welcomeTemplate(data: { name: string }): EmailTemplate {
+  return {
+    subject: "Welcome to SmartMart! 🎉",
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Welcome, ${data.name}!</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        We're thrilled to have you join SmartMart — your one-stop marketplace for everything you need.
+        Discover great deals, shop from trusted vendors, and enjoy fast delivery right to your doorstep.
       </p>
-      <p style="margin:0 0 28px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        Here's what you can do to get started:
-      </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-        <tr><td style="padding:6px 0;color:${BRAND.primaryColor};font-size:14px;">✓ &nbsp; Browse products from verified vendors</td></tr>
-        <tr><td style="padding:6px 0;color:${BRAND.primaryColor};font-size:14px;">✓ &nbsp; Add items to your cart and wishlist</td></tr>
-        <tr><td style="padding:6px 0;color:${BRAND.primaryColor};font-size:14px;">✓ &nbsp; Pay securely with Mobile Money or card</td></tr>
-        <tr><td style="padding:6px 0;color:${BRAND.primaryColor};font-size:14px;">✓ &nbsp; Track your orders in real time</td></tr>
-        <tr><td style="padding:6px 0;color:${BRAND.primaryColor};font-size:14px;">✓ &nbsp; Earn loyalty points on every purchase</td></tr>
-      </table>
-      <div style="margin:28px 0 8px;text-align:center;">
-        ${button("Start Shopping", `${BRAND.url}/shop`)}
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="https://smartmart.com/shop" style="display: inline-block; padding: 14px 36px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; font-family: Arial, sans-serif;">
+          Start Shopping
+        </a>
       </div>
-      <p style="margin:24px 0 0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-        If you have any questions, our support team is always here to help. Happy shopping!
+      <p style="margin: 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        If you have any questions, our support team is always here to help. Just reach out using the contact details below.
       </p>
-    `, `Welcome to ${BRAND.name}`);
-  },
+    `),
+  };
+}
 
-  email_verification: (data) => {
-    const name = String(data.name || "there");
-    const code = String(data.code || "");
-    const link = String(data.verification_url || `${BRAND.url}/verify-email?code=${code}`);
-    return baseTemplate(`
-      <h2 style="margin:0 0 16px;color:${BRAND.textColor};font-size:22px;">Verify Your Email Address</h2>
-      <p style="margin:0 0 16px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        Hi ${name}, thanks for signing up! Please verify your email address to activate your account
-        and start shopping on ${BRAND.name}.
+function emailVerificationTemplate(data: { name: string; verificationUrl: string }): EmailTemplate {
+  return {
+    subject: "Verify Your Email Address",
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Hi ${data.name},</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Please verify your email address to complete your SmartMart account setup. Click the button below to confirm:
       </p>
-      <div style="background-color:${BRAND.primaryLight};border-radius:8px;padding:24px;text-align:center;margin:24px 0;">
-        <p style="margin:0 0 8px;color:${BRAND.textMuted};font-size:13px;text-transform:uppercase;letter-spacing:1px;">Your verification code</p>
-        <p style="margin:0;font-size:32px;font-weight:700;color:${BRAND.primaryColor};letter-spacing:4px;">${code}</p>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${data.verificationUrl}" style="display: inline-block; padding: 14px 36px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; font-family: Arial, sans-serif;">
+          Verify Email
+        </a>
       </div>
-      <p style="margin:0 0 28px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        Or click the button below to verify your email:
+      <p style="margin: 0 0 8px 0; color: #6a6a8a; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Or copy and paste this link into your browser:
       </p>
-      <div style="text-align:center;margin-bottom:8px;">
-        ${button("Verify Email", link)}
-      </div>
-      <p style="margin:24px 0 0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-        This verification code expires in 24 hours. If you didn't create an account, you can safely
-        ignore this email.
+      <p style="margin: 0; color: #4f46e5; font-size: 13px; word-break: break-all; font-family: Arial, sans-serif;">
+        ${data.verificationUrl}
       </p>
-    `, "Verify your email");
-  },
+      <p style="margin: 24px 0 0 0; color: #6a6a8a; font-size: 13px; font-family: Arial, sans-serif;">
+        This link expires in 24 hours. If you didn't create an account, you can safely ignore this email.
+      </p>
+    `),
+  };
+}
 
-  password_reset: (data) => {
-    const name = String(data.name || "there");
-    const link = String(data.reset_url || `${BRAND.url}/reset-password`);
-    return baseTemplate(`
-      <h2 style="margin:0 0 16px;color:${BRAND.textColor};font-size:22px;">Reset Your Password</h2>
-      <p style="margin:0 0 16px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        Hi ${name}, we received a request to reset the password for your ${BRAND.name} account.
-        Click the button below to set a new password:
+function passwordResetTemplate(data: { name: string; resetUrl: string }): EmailTemplate {
+  return {
+    subject: "Reset Your Password",
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Hi ${data.name},</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        We received a request to reset your SmartMart password. Click the button below to choose a new password:
       </p>
-      <div style="text-align:center;margin:28px 0 8px;">
-        ${button("Reset Password", link)}
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${data.resetUrl}" style="display: inline-block; padding: 14px 36px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; font-family: Arial, sans-serif;">
+          Reset Password
+        </a>
       </div>
-      ${divider()}
-      <p style="margin:0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-        If the button doesn't work, copy and paste this link into your browser:<br>
-        <a href="${link}" style="color:${BRAND.primaryColor};word-break:break-all;">${link}</a>
+      <p style="margin: 0 0 8px 0; color: #6a6a8a; font-size: 13px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Or copy and paste this link into your browser:
       </p>
-      <p style="margin:24px 0 0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-        This password reset link expires in 1 hour. If you didn't request a password reset, please
-        ignore this email or contact support if you have concerns.
+      <p style="margin: 0; color: #4f46e5; font-size: 13px; word-break: break-all; font-family: Arial, sans-serif;">
+        ${data.resetUrl}
       </p>
-    `, "Reset your password");
-  },
+      <p style="margin: 24px 0 0 0; color: #6a6a8a; font-size: 13px; font-family: Arial, sans-serif;">
+        This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email — your password won't be changed.
+      </p>
+    `),
+  };
+}
 
-  order_confirmation: (data) => {
-    const orderNumber = String(data.order_number || data.orderNumber || "");
-    const items = (data.items as Array<{ name: string; quantity: number; price: number }>) || [];
-    const total = Number(data.total || 0);
-    const currency = String(data.currency || "GHS");
-    const itemsHtml = items.map((item) => `
+function orderConfirmationTemplate(data: {
+  name: string;
+  orderId: string;
+  items: { name: string; quantity: number; price: number }[];
+  total: number;
+  currency: string;
+  shippingAddress: string;
+}): EmailTemplate {
+  const itemsHtml = data.items
+    .map(
+      (item) => `
       <tr>
-        <td style="padding:10px 0;border-bottom:1px solid ${BRAND.borderColor};color:${BRAND.textColor};font-size:14px;">${item.name}</td>
-        <td style="padding:10px 0;border-bottom:1px solid ${BRAND.borderColor};color:${BRAND.textColor};font-size:14px;text-align:center;">${item.quantity}</td>
-        <td style="padding:10px 0;border-bottom:1px solid ${BRAND.borderColor};color:${BRAND.textColor};font-size:14px;text-align:right;font-weight:600;">${currency} ${item.price.toFixed(2)}</td>
-      </tr>`).join("");
-    return baseTemplate(`
-      <h2 style="margin:0 0 8px;color:${BRAND.textColor};font-size:22px;">Order Confirmed! ✅</h2>
-      <p style="margin:0 0 24px;color:${BRAND.textMuted};font-size:14px;">Order #${orderNumber}</p>
-      <p style="margin:0 0 20px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        Thank you for your purchase! Your order has been confirmed and is being processed.
-        We'll send you another email when your items ship.
+        <td style="padding: 12px 0; border-bottom: 1px solid #eee; color: #4a4a6a; font-size: 14px; font-family: Arial, sans-serif;">${item.name}</td>
+        <td style="padding: 12px 0; border-bottom: 1px solid #eee; color: #4a4a6a; font-size: 14px; text-align: center; font-family: Arial, sans-serif;">${item.quantity}</td>
+        <td style="padding: 12px 0; border-bottom: 1px solid #eee; color: #4a4a6a; font-size: 14px; text-align: right; font-family: Arial, sans-serif;">${data.currency} ${(item.price * item.quantity).toFixed(2)}</td>
+      </tr>`
+    )
+    .join("");
+
+  return {
+    subject: `Order Confirmed — #${data.orderId}`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Order Confirmed! ✅</h2>
+      <p style="margin: 0 0 8px 0; color: #4a4a6a; font-size: 15px; font-family: Arial, sans-serif;">Hi ${data.name},</p>
+      <p style="margin: 0 0 24px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Thank you for your order! Your order <strong>#${data.orderId}</strong> has been confirmed and is being processed.
       </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid ${BRAND.borderColor};border-radius:8px;overflow:hidden;">
-        <tr style="background-color:${BRAND.backgroundColor};">
-          <td style="padding:12px 16px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:${BRAND.textMuted};font-weight:600;">Product</td>
-          <td style="padding:12px 16px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:${BRAND.textMuted};font-weight:600;text-align:center;">Qty</td>
-          <td style="padding:12px 16px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:${BRAND.textMuted};font-weight:600;text-align:right;">Price</td>
-        </tr>
-        ${itemsHtml}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+        <thead>
+          <tr style="background-color: #f8f8fc;">
+            <th style="padding: 12px; text-align: left; color: #1a1a2e; font-size: 13px; font-family: Arial, sans-serif;">Item</th>
+            <th style="padding: 12px; text-align: center; color: #1a1a2e; font-size: 13px; font-family: Arial, sans-serif;">Qty</th>
+            <th style="padding: 12px; text-align: right; color: #1a1a2e; font-size: 13px; font-family: Arial, sans-serif;">Price</th>
+          </tr>
+        </thead>
+        <tbody>${itemsHtml}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" style="padding: 16px 0 0 0; text-align: right; color: #1a1a2e; font-size: 15px; font-weight: 700; font-family: Arial, sans-serif;">Total:</td>
+            <td style="padding: 16px 0 0 0; text-align: right; color: #4f46e5; font-size: 15px; font-weight: 700; font-family: Arial, sans-serif;">${data.currency} ${data.total.toFixed(2)}</td>
+          </tr>
+        </tfoot>
+      </table>
+      <p style="margin: 0 0 8px 0; color: #4a4a6a; font-size: 14px; font-family: Arial, sans-serif;"><strong>Shipping Address:</strong></p>
+      <p style="margin: 0 0 24px 0; color: #4a4a6a; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif;">${data.shippingAddress}</p>
+      <p style="margin: 0; color: #4a4a6a; font-size: 14px; font-family: Arial, sans-serif;">
+        We'll send you another email when your order ships. Track your order anytime in your account dashboard.
+      </p>
+    `),
+  };
+}
+
+function orderShippedTemplate(data: {
+  name: string;
+  orderId: string;
+  trackingNumber: string;
+  carrier: string;
+}): EmailTemplate {
+  return {
+    subject: `Your Order #${data.orderId} Has Shipped! 📦`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Your Order is on the Way! 🚚</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; font-family: Arial, sans-serif;">Hi ${data.name},</p>
+      <p style="margin: 0 0 24px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Great news! Your order <strong>#${data.orderId}</strong> has been shipped and is on its way to you.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; background-color: #f8f8fc; border-radius: 6px;">
         <tr>
-          <td colspan="2" style="padding:14px 16px;color:${BRAND.textColor};font-size:15px;font-weight:700;text-align:right;">Total:</td>
-          <td style="padding:14px 16px;color:${BRAND.primaryColor};font-size:18px;font-weight:700;text-align:right;">${currency} ${total.toFixed(2)}</td>
+          <td style="padding: 16px 20px;">
+            <p style="margin: 0 0 4px 0; color: #6a6a8a; font-size: 12px; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Tracking Number</p>
+            <p style="margin: 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: Arial, sans-serif;">${data.trackingNumber}</p>
+          </td>
+          <td style="padding: 16px 20px;">
+            <p style="margin: 0 0 4px 0; color: #6a6a8a; font-size: 12px; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Carrier</p>
+            <p style="margin: 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: Arial, sans-serif;">${data.carrier}</p>
+          </td>
         </tr>
       </table>
-      <div style="margin:28px 0 8px;text-align:center;">
-        ${button("Track Your Order", `${BRAND.url}/orders/${orderNumber}`)}
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="https://smartmart.com/orders/${data.orderId}" style="display: inline-block; padding: 14px 36px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; font-family: Arial, sans-serif;">
+          Track Your Order
+        </a>
       </div>
-      <p style="margin:24px 0 0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-        You can always check your order status from your account dashboard.
+      <p style="margin: 0; color: #4a4a6a; font-size: 14px; font-family: Arial, sans-serif;">
+        Estimated delivery: 2-5 business days. If you have any questions, contact our support team.
       </p>
-    `, `Order #${orderNumber} confirmed`);
-  },
+    `),
+  };
+}
 
-  order_shipped: (data) => {
-    const orderNumber = String(data.order_number || data.orderNumber || "");
-    const trackingNumber = String(data.tracking_number || data.trackingNumber || "");
-    const carrier = String(data.carrier || "");
-    const link = String(data.tracking_url || `${BRAND.url}/orders/${orderNumber}`);
-    return baseTemplate(`
-      <h2 style="margin:0 0 16px;color:${BRAND.textColor};font-size:22px;">Your Order Has Shipped! 📦</h2>
-      <p style="margin:0 0 24px;color:${BRAND.textMuted};font-size:14px;">Order #${orderNumber}</p>
-      <p style="margin:0 0 20px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        Great news! Your order is on its way. Here are your shipping details:
+function orderDeliveredTemplate(data: { name: string; orderId: string }): EmailTemplate {
+  return {
+    subject: `Order #${data.orderId} Delivered! 🎉`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Delivered! 🎉</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; font-family: Arial, sans-serif;">Hi ${data.name},</p>
+      <p style="margin: 0 0 24px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Your order <strong>#${data.orderId}</strong> has been delivered. We hope you love your purchase!
       </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.primaryLight};border-radius:8px;margin:0 0 24px;">
-        <tr><td style="padding:16px 20px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            ${infoBox("Tracking Number", trackingNumber || "N/A")}
-            ${carrier ? infoBox("Carrier", carrier) : ""}
-          </table>
-        </td></tr>
+      <p style="margin: 0 0 24px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        If you're happy with your order, please consider leaving a review — it helps other shoppers and supports our vendors.
+      </p>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="https://smartmart.com/orders/${data.orderId}/review" style="display: inline-block; padding: 14px 36px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; font-family: Arial, sans-serif;">
+          Leave a Review
+        </a>
+      </div>
+      <p style="margin: 0; color: #4a4a6a; font-size: 14px; font-family: Arial, sans-serif;">
+        If there's any issue with your order, please contact our support team within 7 days for assistance.
+      </p>
+    `),
+  };
+}
+
+function refundNotificationTemplate(data: {
+  name: string;
+  orderId: string;
+  refundAmount: number;
+  currency: string;
+  reason: string;
+}): EmailTemplate {
+  return {
+    subject: `Refund Processed — Order #${data.orderId}`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Refund Processed 💰</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; font-family: Arial, sans-serif;">Hi ${data.name},</p>
+      <p style="margin: 0 0 24px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        A refund of <strong>${data.currency} ${data.refundAmount.toFixed(2)}</strong> has been processed for your order <strong>#${data.orderId}</strong>.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; background-color: #f8f8fc; border-radius: 6px;">
+        <tr>
+          <td style="padding: 16px 20px;">
+            <p style="margin: 0 0 4px 0; color: #6a6a8a; font-size: 12px; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Refund Amount</p>
+            <p style="margin: 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: Arial, sans-serif;">${data.currency} ${data.refundAmount.toFixed(2)}</p>
+          </td>
+          <td style="padding: 16px 20px;">
+            <p style="margin: 0 0 4px 0; color: #6a6a8a; font-size: 12px; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Reason</p>
+            <p style="margin: 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: Arial, sans-serif;">${data.reason}</p>
+          </td>
+        </tr>
       </table>
-      <div style="text-align:center;margin:28px 0 8px;">
-        ${button("Track Your Package", link)}
-      </div>
-      <p style="margin:24px 0 0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-        Estimated delivery time depends on your location within Ghana. You'll receive a notification
-        when your package is delivered.
+      <p style="margin: 0; color: #4a4a6a; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif;">
+        The refund will appear in your account within 5-10 business days, depending on your bank or payment provider.
       </p>
-    `, `Order #${orderNumber} shipped`);
-  },
+    `),
+  };
+}
 
-  order_delivered: (data) => {
-    const orderNumber = String(data.order_number || data.orderNumber || "");
-    const link = String(data.review_url || `${BRAND.url}/orders/${orderNumber}`);
-    return baseTemplate(`
-      <h2 style="margin:0 0 16px;color:${BRAND.textColor};font-size:22px;">Order Delivered! 🎉</h2>
-      <p style="margin:0 0 24px;color:${BRAND.textMuted};font-size:14px;">Order #${orderNumber}</p>
-      <p style="margin:0 0 20px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        Your order has been successfully delivered. We hope you love your purchase! If you have any
-        issues with your items, please contact the vendor or our support team within 7 days.
+function vendorApprovalTemplate(data: { name: string; storeName: string }): EmailTemplate {
+  return {
+    subject: "Your Vendor Application Has Been Approved! ✅",
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Welcome Aboard, ${data.name}! 🎉</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Congratulations! Your vendor application for <strong>${data.storeName}</strong> has been approved.
+        You can now start listing products and selling on SmartMart.
       </p>
-      <p style="margin:0 0 28px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        We'd love to hear your feedback. Please take a moment to review your purchase:
-      </p>
-      <div style="text-align:center;margin:28px 0 8px;">
-        ${button("Leave a Review", link)}
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="https://smartmart.com/vendor/dashboard" style="display: inline-block; padding: 14px 36px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; font-family: Arial, sans-serif;">
+          Go to Vendor Dashboard
+        </a>
       </div>
-      <p style="margin:24px 0 0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-        Reviews help other shoppers make informed decisions and support our vendors.
-        Thank you for shopping with ${BRAND.name}!
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Here's what you can do next:
       </p>
-    `, `Order #${orderNumber} delivered`);
-  },
+      <ul style="margin: 0 0 24px 0; padding-left: 20px; color: #4a4a6a; font-size: 15px; line-height: 1.8; font-family: Arial, sans-serif;">
+        <li>Set up your store profile and branding</li>
+        <li>Add your first products</li>
+        <li>Configure shipping and payout settings</li>
+        <li>Start receiving orders from customers</li>
+      </ul>
+      <p style="margin: 0; color: #4a4a6a; font-size: 14px; font-family: Arial, sans-serif;">
+        If you need any help getting started, our support team is just a message away.
+      </p>
+    `),
+  };
+}
 
-  refund_notification: (data) => {
-    const orderNumber = String(data.order_number || data.orderNumber || "");
-    const amount = Number(data.amount || 0);
-    const currency = String(data.currency || "GHS");
-    const reason = String(data.reason || "Refund processed");
-    return baseTemplate(`
-      <h2 style="margin:0 0 16px;color:${BRAND.textColor};font-size:22px;">Refund Processed 💰</h2>
-      <p style="margin:0 0 24px;color:${BRAND.textMuted};font-size:14px;">Order #${orderNumber}</p>
-      <p style="margin:0 0 20px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        A refund has been processed for your order. Here are the details:
+function vendorRejectionTemplate(data: { name: string; reason: string }): EmailTemplate {
+  return {
+    subject: "Update on Your Vendor Application",
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Hi ${data.name},</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Thank you for your interest in becoming a vendor on SmartMart. After reviewing your application,
+        we're unable to approve it at this time.
       </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.primaryLight};border-radius:8px;margin:0 0 24px;">
-        <tr><td style="padding:16px 20px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            ${infoBox("Refund Amount", `${currency} ${amount.toFixed(2)}`)}
-            ${infoBox("Order Number", `#${orderNumber}`)}
-            ${infoBox("Reason", reason)}
-          </table>
-        </td></tr>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; background-color: #fff5f5; border-radius: 6px; border-left: 4px solid #ef4444;">
+        <tr>
+          <td style="padding: 16px 20px;">
+            <p style="margin: 0 0 4px 0; color: #6a6a8a; font-size: 12px; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Reason</p>
+            <p style="margin: 0; color: #1a1a2e; font-size: 15px; font-family: Arial, sans-serif;">${data.reason}</p>
+          </td>
+        </tr>
       </table>
-      <p style="margin:0 0 8px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        Your refund will appear in your original payment method within 5-10 business days,
-        depending on your bank or mobile money provider.
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        You're welcome to reapply after addressing the issues mentioned above. We're here to help you succeed.
       </p>
-      <p style="margin:0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-        If you have any questions about your refund, please contact our support team.
+      <p style="margin: 0; color: #4a4a6a; font-size: 14px; font-family: Arial, sans-serif;">
+        If you believe this decision was made in error, or if you'd like guidance on how to improve your application,
+        please contact our support team using the details below.
       </p>
-    `, `Refund for order #${orderNumber}`);
-  },
+    `),
+  };
+}
 
-  vendor_approval: (data) => {
-    const name = String(data.name || "there");
-    const storeName = String(data.store_name || data.storeName || "");
-    return baseTemplate(`
-      <h2 style="margin:0 0 16px;color:${BRAND.textColor};font-size:22px;">Vendor Application Approved! 🏪</h2>
-      <p style="margin:0 0 20px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        Congratulations, ${name}! Your vendor application has been approved. Your store
-        ${storeName ? `<strong style="color:${BRAND.primaryColor};">${storeName}</strong>` : ""}
-        is now live on ${BRAND.name}.
-      </p>
-      <p style="margin:0 0 20px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        You can now start listing products, managing inventory, and receiving orders. Here's what
-        you can do next:
-      </p>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-        <tr><td style="padding:6px 0;color:${BRAND.primaryColor};font-size:14px;">✓ &nbsp; Set up your store profile and logo</td></tr>
-        <tr><td style="padding:6px 0;color:${BRAND.primaryColor};font-size:14px;">✓ &nbsp; Add your first products</td></tr>
-        <tr><td style="padding:6px 0;color:${BRAND.primaryColor};font-size:14px;">✓ &nbsp; Configure shipping options</td></tr>
-        <tr><td style="padding:6px 0;color:${BRAND.primaryColor};font-size:14px;">✓ &nbsp; Set up payout details</td></tr>
-      </table>
-      <div style="margin:28px 0 8px;text-align:center;">
-        ${button("Access Vendor Dashboard", `${BRAND.url}/vendor/dashboard`)}
-      </div>
-      <p style="margin:24px 0 0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-        Welcome aboard! We're excited to partner with you. Check our vendor guide for tips on
-        growing your business on ${BRAND.name}.
-      </p>
-    `, "Vendor application approved");
-  },
+// ============================================================================
+// Template Registry
+// ============================================================================
 
-  vendor_rejection: (data) => {
-    const name = String(data.name || "there");
-    const reason = String(data.reason || "Your application did not meet our current requirements.");
-    return baseTemplate(`
-      <h2 style="margin:0 0 16px;color:${BRAND.textColor};font-size:22px;">Vendor Application Update</h2>
-      <p style="margin:0 0 20px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        Hi ${name}, thank you for your interest in becoming a vendor on ${BRAND.name}.
-      </p>
-      <p style="margin:0 0 20px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        After reviewing your application, we're unable to approve it at this time. Here's why:
-      </p>
-      <div style="background-color:#FEF3C7;border-left:4px solid ${BRAND.accentColor};border-radius:4px;padding:16px 20px;margin:0 0 24px;">
-        <p style="margin:0;color:${BRAND.textColor};font-size:14px;line-height:1.6;">${reason}</p>
-      </div>
-      <p style="margin:0 0 20px;color:${BRAND.textColor};font-size:15px;line-height:1.6;">
-        You're welcome to reapply after addressing the above. If you believe this decision was made
-        in error, or if you need clarification, please contact our support team.
-      </p>
-      <p style="margin:0;color:${BRAND.textMuted};font-size:13px;line-height:1.5;">
-        We appreciate your understanding and wish you the best.
-      </p>
-    `, "Vendor application update");
-  },
+const TEMPLATES: Record<string, (data: any) => EmailTemplate> = {
+  welcome: welcomeTemplate,
+  email_verification: emailVerificationTemplate,
+  password_reset: passwordResetTemplate,
+  order_confirmation: orderConfirmationTemplate,
+  order_shipped: orderShippedTemplate,
+  order_delivered: orderDeliveredTemplate,
+  refund_notification: refundNotificationTemplate,
+  vendor_approval: vendorApprovalTemplate,
+  vendor_rejection: vendorRejectionTemplate,
 };
 
 // ============================================================================
 // Resend API Integration
 // ============================================================================
 
-interface EmailPayload {
-  to: string;
-  template: string;
-  data?: TemplateData;
-}
+async function sendViaResend(
+  to: string,
+  subject: string,
+  html: string,
+  env: Record<string, string>
+): Promise<{ success: boolean; error?: string }> {
+  const resendApiKey = env.RESEND_API_KEY;
+  const emailFrom = env.EMAIL_FROM || CONTACT_EMAIL;
 
-async function sendWithResend(to: string, subject: string, html: string): Promise<{ success: boolean; error?: string }> {
-  const apiKey = getEnv("EMAIL_API_KEY");
-  const fromEmail = getEnv("EMAIL_FROM") || `noreply@${BRAND.url.replace("https://", "")}`;
-
-  if (!apiKey) {
-    return { success: false, error: "EMAIL_API_KEY is not configured" };
+  if (!resendApiKey) {
+    return { success: false, error: "Missing RESEND_API_KEY environment variable" };
   }
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: `${BRAND.name} <${fromEmail}>`,
-      to: [to],
-      subject,
-      html,
-    }),
-  });
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${resendApiKey}`,
+      },
+      body: JSON.stringify({
+        from: `SmartMart <${emailFrom}>`,
+        to: [to],
+        subject,
+        html,
+      }),
+    });
 
-  if (!res.ok) {
-    const err = await res.text();
-    return { success: false, error: `Resend API error: ${err}` };
+    if (!response.ok) {
+      const errorBody = await response.text();
+      return { success: false, error: `Resend API error (${response.status}): ${errorBody}` };
+    }
+
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: String(error) };
   }
-
-  return { success: true };
 }
-
-const subjectMap: Record<string, string> = {
-  welcome: `Welcome to ${BRAND.name}!`,
-  email_verification: "Verify Your Email Address",
-  password_reset: "Reset Your Password",
-  order_confirmation: "Your Order is Confirmed",
-  order_shipped: "Your Order Has Shipped",
-  order_delivered: "Your Order Has Been Delivered",
-  refund_notification: "Refund Processed",
-  vendor_approval: "Vendor Application Approved!",
-  vendor_rejection: "Vendor Application Update",
-};
 
 // ============================================================================
-// Edge Function Handler
+// Main Handler
 // ============================================================================
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
   try {
-    const payload: EmailPayload = await req.json();
-    const { to, template, data } = payload;
+    const env: Record<string, string> = {
+      RESEND_API_KEY: Deno.env.get("RESEND_API_KEY") || "",
+      EMAIL_FROM: Deno.env.get("EMAIL_FROM") || CONTACT_EMAIL,
+    };
+
+    const body = await req.json();
+
+    const { to, template, data } = body;
 
     if (!to || !template) {
-      return new Response(JSON.stringify({ error: "Missing required fields: 'to' and 'template' are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Missing required fields: 'to' and 'template' are required" }, 400);
     }
 
-    const templateFn = templates[template];
+    const templateFn = TEMPLATES[template];
     if (!templateFn) {
-      const available = Object.keys(templates).join(", ");
-      return new Response(JSON.stringify({ error: `Unknown template '${template}'. Available: ${available}` }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({
+        error: `Unknown template: '${template}'. Available templates: ${Object.keys(TEMPLATES).join(", ")}`,
+      }, 400);
     }
 
-    const html = templateFn(data || {});
-    const subject = subjectMap[template] || `${BRAND.name} Notification`;
-
-    const result = await sendWithResend(to, subject, html);
+    const { subject, html } = templateFn(data || {});
+    const result = await sendViaResend(to, subject, html, env);
 
     if (!result.success) {
-      return new Response(JSON.stringify({ error: result.error }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: result.error }, 500);
     }
 
-    return new Response(JSON.stringify({ success: true, message: `Email '${template}' sent to ${to}` }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return jsonResponse({
+      success: true,
+      message: "Email sent successfully",
+      template,
+      to,
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+  } catch (error) {
+    console.error("send-email error:", error);
+    return jsonResponse({ error: "Internal server error" }, 500);
   }
 });

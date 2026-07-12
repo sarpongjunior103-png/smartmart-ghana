@@ -1,83 +1,218 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createHmac } from "node:crypto";
+
+// ============================================================================
+// CORS Headers
+// ============================================================================
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Paystack-Signature",
 };
 
-function getEnv(key: string): string {
-  return Deno.env.get(key) ?? "";
+// ============================================================================
+// Helpers
+// ============================================================================
+
+function getEnv(name: string): string {
+  const value = Deno.env.get(name);
+  if (!value || value.trim() === "") {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+  return value;
 }
 
-async function updatePaymentStatus(supabaseUrl: string, supabaseKey: string, reference: string, status: string, gatewayResponse: unknown) {
-  const res = await fetch(`${supabaseUrl}/rest/v1/payments?gateway_reference=eq.${reference}`, {
-    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}` },
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      ...corsHeaders,
+    },
   });
-  const payments = await res.json();
-  if (!payments || payments.length === 0) return;
+}
 
-  await fetch(`${supabaseUrl}/rest/v1/payments?id=eq.${payments[0].id}`, {
-    method: "PATCH",
-    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify({ status, gateway_response: gatewayResponse }),
+async function supabaseRequest(
+  path: string,
+  method: string,
+  body: unknown,
+  env: Record<string, string>
+): Promise<Response> {
+  const supabaseUrl = env.SUPABASE_URL;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  return await fetch(`${supabaseUrl}/rest/v1/${path}`, {
+    method,
+    headers: {
+      "Content-Type": "application/json",
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify(body),
   });
+}
 
-  await fetch(`${supabaseUrl}/rest/v1/transactions?transaction_reference=eq.${reference}`, {
-    method: "PATCH",
-    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify({ status }),
-  });
+// ============================================================================
+// Signature Verification
+// ============================================================================
 
-  if (status === "success" && payments[0].order_id) {
-    await fetch(`${supabaseUrl}/rest/v1/orders?id=eq.${payments[0].order_id}`, {
-      method: "PATCH",
-      headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-      body: JSON.stringify({ status: "confirmed" }),
-    });
+function verifySignature(rawBody: string, signature: string | null, secret: string): boolean {
+  if (!signature) return false;
+  const hash = createHmac("sha512", secret).update(rawBody).digest("hex");
+  return hash === signature;
+}
+
+// ============================================================================
+// Payment Status Update
+// ============================================================================
+
+async function updatePaymentStatus(
+  reference: string,
+  status: string,
+  amount: number,
+  currency: string,
+  customerEmail: string | null,
+  env: Record<string, string>
+): Promise<void> {
+  // 1. Update payments table
+  await supabaseRequest(
+    "payments?reference=eq." + encodeURIComponent(reference),
+    "PATCH",
+    {
+      status,
+      amount,
+      currency,
+      customer_email: customerEmail,
+      updated_at: new Date().toISOString(),
+    },
+    env
+  );
+
+  // 2. Update transactions table
+  await supabaseRequest(
+    "transactions?reference=eq." + encodeURIComponent(reference),
+    "PATCH",
+    {
+      status,
+      amount,
+      currency,
+      updated_at: new Date().toISOString(),
+    },
+    env
+  );
+
+  // 3. Update orders table (confirm order if payment successful)
+  if (status === "success") {
+    await supabaseRequest(
+      "orders?payment_reference=eq." + encodeURIComponent(reference),
+      "PATCH",
+      {
+        payment_status: "paid",
+        status: "confirmed",
+        confirmed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      env
+    );
+  } else if (status === "failed") {
+    await supabaseRequest(
+      "orders?payment_reference=eq." + encodeURIComponent(reference),
+      "PATCH",
+      {
+        payment_status: "failed",
+        status: "cancelled",
+        updated_at: new Date().toISOString(),
+      },
+      env
+    );
   }
 
-  await fetch(`${supabaseUrl}/rest/v1/activity_logs`, {
-    method: "POST",
-    headers: { apikey: supabaseKey, Authorization: `Bearer ${supabaseKey}`, "Content-Type": "application/json", Prefer: "return=minimal" },
-    body: JSON.stringify({ action: `payment_${status}`, entity_type: "payment", entity_id: payments[0].id, details: { reference, status } }),
-  });
+  // 4. Log activity
+  await supabaseRequest("activity_logs", "POST", {
+    action: `payment.${status}`,
+    entity_type: "payment",
+    entity_id: reference,
+    description: `Paystack payment ${reference} marked as ${status}`,
+    metadata: { reference, status, amount, currency, gateway: "paystack" },
+    created_at: new Date().toISOString(),
+  }, env);
 }
 
+// ============================================================================
+// Main Handler
+// ============================================================================
+
 Deno.serve(async (req: Request) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
   try {
-    const { url, key } = { url: getEnv("SUPABASE_URL"), key: getEnv("SUPABASE_SERVICE_ROLE_KEY") };
-    const paystackSignature = req.headers.get("x-paystack-signature");
-    const body = await req.text();
+    const env: Record<string, string> = {
+      SUPABASE_URL: Deno.env.get("SUPABASE_URL") || "",
+      SUPABASE_SERVICE_ROLE_KEY: Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
+      PAYSTACK_SECRET_KEY: Deno.env.get("PAYSTACK_SECRET_KEY") || "",
+    };
 
-    if (!paystackSignature) {
-      return new Response(JSON.stringify({ error: "Missing signature" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+      return jsonResponse({ error: "Server misconfiguration" }, 500);
     }
 
-    const event = JSON.parse(body);
+    const rawBody = await req.text();
+    const signature = req.headers.get("x-paystack-signature");
 
-    if (event.event === "charge.success") {
-      await updatePaymentStatus(url, key, event.data.reference, "success", event.data);
-    } else if (event.event === "charge.failed") {
-      await updatePaymentStatus(url, key, event.data.reference, "failed", event.data);
-    } else if (event.event === "refund.processed") {
-      await updatePaymentStatus(url, key, event.data.reference, "refunded", event.data);
+    // Verify webhook signature
+    if (!env.PAYSTACK_SECRET_KEY) {
+      return jsonResponse({ error: "Missing PAYSTACK_SECRET_KEY" }, 500);
     }
 
-    return new Response(JSON.stringify({ status: "success" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const isValid = verifySignature(rawBody, signature, env.PAYSTACK_SECRET_KEY);
+    if (!isValid) {
+      return jsonResponse({ error: "Invalid signature" }, 401);
+    }
+
+    const event = JSON.parse(rawBody);
+
+    // Paystack event structure: { event, data: { reference, amount, currency, status, customer: { email } } }
+    const data = event.data || {};
+    const reference = data.reference || "";
+    const amount = data.amount || 0; // in kobo
+    const currency = data.currency || "GHS";
+    const customerEmail = data.customer?.email || null;
+
+    let paymentStatus = "pending";
+
+    switch (event.event) {
+      case "charge.success":
+        paymentStatus = "success";
+        break;
+      case "charge.failed":
+        paymentStatus = "failed";
+        break;
+      case "transfer.success":
+        paymentStatus = "success";
+        break;
+      case "transfer.failed":
+        paymentStatus = "failed";
+        break;
+      case "refund.processed":
+        paymentStatus = "refunded";
+        break;
+      default:
+        // Unhandled event — acknowledge but don't process
+        return jsonResponse({ message: "Event acknowledged", event: event.event });
+    }
+
+    await updatePaymentStatus(reference, paymentStatus, amount, currency, customerEmail, env);
+
+    return jsonResponse({ message: "Webhook processed", event: event.event, reference, status: paymentStatus });
+  } catch (error) {
+    console.error("Paystack webhook error:", error);
+    return jsonResponse({ error: "Internal server error" }, 500);
   }
 });

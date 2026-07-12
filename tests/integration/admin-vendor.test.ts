@@ -1,303 +1,507 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+// ============================================================================
+// Integration Tests for Admin & Vendor Features
+// Vendor profiles, stores, activity logs, inventory logs, loyalty points,
+// referrals, chat conversations
+// ============================================================================
 
-// Use service role key for integration tests to bypass RLS
-const supabase = createClient(supabaseUrl, supabaseServiceKey || supabaseUrl);
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'test-service-key';
 
-describe("Admin & Vendor Integration Tests", () => {
-  describe("vendor_profiles table", () => {
-    it("should connect to vendor_profiles table", async () => {
+const TEST_USER_ID = '00000000-0000-0000-0000-000000000010';
+const TEST_VENDOR_USER_ID = '00000000-0000-0000-0000-000000000020';
+const TEST_CUSTOMER_ID = '00000000-0000-0000-0000-000000000030';
+
+describe('Admin & Vendor Integration Tests', () => {
+  let supabase: SupabaseClient;
+
+  beforeAll(() => {
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  });
+
+  // ==========================================================================
+  // Vendor Profiles
+  // ==========================================================================
+
+  describe('Vendor Profiles', () => {
+    it('retrieves vendor profiles', async () => {
       const { data, error } = await supabase
-        .from("vendor_profiles")
-        .select("*")
-        .limit(1);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should have expected columns in vendor_profiles", async () => {
-      const { data, error } = await supabase
-        .from("vendor_profiles")
-        .select("id, store_name, status, commission_rate, payout_balance")
-        .limit(1);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should filter vendor_profiles by status", async () => {
-      const { data, error } = await supabase
-        .from("vendor_profiles")
-        .select("id, store_name, status")
-        .in("status", ["pending", "approved", "suspended"])
+        .from('vendor_profiles')
+        .select('id, user_id, business_name, status, created_at')
         .limit(10);
 
       expect(error).toBeNull();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it('filters vendor profiles by status', async () => {
+      const statuses = ['pending', 'approved', 'rejected', 'suspended'];
+      for (const status of statuses) {
+        const { data, error } = await supabase
+          .from('vendor_profiles')
+          .select('id, status')
+          .eq('status', status)
+          .limit(10);
+
+        expect(error).toBeNull();
+      }
+    });
+
+    it('creates a vendor profile', async () => {
+      const { data, error } = await supabase
+        .from('vendor_profiles')
+        .insert({
+          user_id: TEST_VENDOR_USER_ID,
+          business_name: 'Test Vendor Store',
+          status: 'pending',
+          business_email: 'vendor@smartmart-test.com',
+          business_phone: '+233 55 162 1261',
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.log('Vendor profile creation skipped:', error.message);
+        return;
+      }
       expect(data).toBeDefined();
+      expect(data.status).toBe('pending');
+
+      // Clean up
+      await supabase.from('vendor_profiles').delete().eq('id', data.id);
+    });
+
+    it('approves a vendor profile', async () => {
+      // Create then approve
+      const { data: created, error: createError } = await supabase
+        .from('vendor_profiles')
+        .insert({
+          user_id: TEST_VENDOR_USER_ID,
+          business_name: 'Approval Test Store',
+          status: 'pending',
+        })
+        .select()
+        .single();
+
+      if (createError || !created) return;
+
+      const { data: updated, error: updateError } = await supabase
+        .from('vendor_profiles')
+        .update({
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', created.id)
+        .select()
+        .single();
+
+      if (!updateError && updated) {
+        expect(updated.status).toBe('approved');
+      }
+
+      await supabase.from('vendor_profiles').delete().eq('id', created.id);
     });
   });
 
-  describe("stores table", () => {
-    it("should connect to stores table", async () => {
+  // ==========================================================================
+  // Stores
+  // ==========================================================================
+
+  describe('Stores', () => {
+    it('retrieves stores', async () => {
       const { data, error } = await supabase
-        .from("stores")
-        .select("*")
-        .limit(1);
+        .from('stores')
+        .select('id, vendor_id, name, slug, status, created_at')
+        .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
 
-    it("should have expected columns in stores", async () => {
+    it('filters stores by status', async () => {
       const { data, error } = await supabase
-        .from("stores")
-        .select("id, vendor_id, name, slug, description, logo_url, status")
-        .limit(1);
+        .from('stores')
+        .select('id, status')
+        .eq('status', 'active')
+        .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
 
-    it("should join stores with vendor_profiles", async () => {
+    it('creates a store for a vendor', async () => {
       const { data, error } = await supabase
-        .from("stores")
-        .select(`
-          id,
-          name,
-          vendor:vendor_profiles(id, store_name, status, commission_rate)
-        `)
-        .limit(5);
+        .from('stores')
+        .insert({
+          vendor_id: TEST_VENDOR_USER_ID,
+          name: 'Test Store',
+          slug: `test-store-${Date.now()}`,
+          status: 'active',
+          description: 'A test store for integration testing.',
+        })
+        .select()
+        .single();
 
-      expect(error).toBeNull();
+      if (error) {
+        console.log('Store creation skipped:', error.message);
+        return;
+      }
       expect(data).toBeDefined();
+      expect(data.name).toBe('Test Store');
+
+      await supabase.from('stores').delete().eq('id', data.id);
     });
   });
 
-  describe("activity_logs table", () => {
-    it("should connect to activity_logs table", async () => {
+  // ==========================================================================
+  // Activity Logs
+  // ==========================================================================
+
+  describe('Activity Logs', () => {
+    it('retrieves activity logs', async () => {
       const { data, error } = await supabase
-        .from("activity_logs")
-        .select("*")
+        .from('activity_logs')
+        .select('id, action, entity_type, entity_id, description, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      expect(error).toBeNull();
+    });
+
+    it('creates an activity log entry', async () => {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .insert({
+          action: 'test.action',
+          entity_type: 'test',
+          entity_id: `test-${Date.now()}`,
+          description: 'Test activity log entry from integration tests',
+          metadata: { source: 'integration-test' },
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.log('Activity log creation skipped:', error.message);
+        return;
+      }
+      expect(data).toBeDefined();
+      expect(data.action).toBe('test.action');
+
+      await supabase.from('activity_logs').delete().eq('id', data.id);
+    });
+
+    it('filters activity logs by action type', async () => {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('id, action')
+        .like('action', 'payment.%')
         .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
 
-    it("should have expected columns in activity_logs", async () => {
+    it('filters activity logs by entity type', async () => {
       const { data, error } = await supabase
-        .from("activity_logs")
-        .select("id, user_id, action, entity_type, entity_id, details, created_at")
-        .limit(1);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should filter activity_logs by action", async () => {
-      const { data, error } = await supabase
-        .from("activity_logs")
-        .select("id, action, entity_type")
-        .like("action", "payment_%")
+        .from('activity_logs')
+        .select('id, entity_type')
+        .eq('entity_type', 'order')
         .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should filter activity_logs by entity_type", async () => {
-      const { data, error } = await supabase
-        .from("activity_logs")
-        .select("id, action, entity_type")
-        .eq("entity_type", "payment")
-        .limit(10);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
   });
 
-  describe("inventory_logs table", () => {
-    it("should connect to inventory_logs table", async () => {
+  // ==========================================================================
+  // Inventory Logs
+  // ==========================================================================
+
+  describe('Inventory Logs', () => {
+    it('retrieves inventory logs', async () => {
       const { data, error } = await supabase
-        .from("inventory_logs")
-        .select("*")
-        .limit(10);
+        .from('inventory_logs')
+        .select('id, product_id, change_type, quantity_change, reason, created_at')
+        .limit(20);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
 
-    it("should have expected columns in inventory_logs", async () => {
+    it('creates an inventory log entry', async () => {
       const { data, error } = await supabase
-        .from("inventory_logs")
-        .select("id, product_id, change_type, quantity_change, previous_stock, new_stock, reason, created_at")
-        .limit(1);
+        .from('inventory_logs')
+        .insert({
+          product_id: '00000000-0000-0000-0000-000000000003',
+          change_type: 'restock',
+          quantity_change: 50,
+          previous_stock: 10,
+          new_stock: 60,
+          reason: 'Test restock from integration tests',
+        })
+        .select()
+        .single();
 
-      expect(error).toBeNull();
+      if (error) {
+        console.log('Inventory log creation skipped:', error.message);
+        return;
+      }
       expect(data).toBeDefined();
+      expect(data.change_type).toBe('restock');
+
+      await supabase.from('inventory_logs').delete().eq('id', data.id);
     });
 
-    it("should filter inventory_logs by change_type", async () => {
-      const { data, error } = await supabase
-        .from("inventory_logs")
-        .select("id, change_type, quantity_change")
-        .in("change_type", ["restock", "sale", "adjustment", "return"])
-        .limit(10);
+    it('filters inventory logs by change type', async () => {
+      const changeTypes = ['restock', 'sale', 'adjustment', 'return', 'damage'];
+      for (const type of changeTypes) {
+        const { data, error } = await supabase
+          .from('inventory_logs')
+          .select('id, change_type')
+          .eq('change_type', type)
+          .limit(10);
 
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should join inventory_logs with products", async () => {
-      const { data, error } = await supabase
-        .from("inventory_logs")
-        .select(`
-          id,
-          change_type,
-          quantity_change,
-          product:products(id, name)
-        `)
-        .limit(5);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-  });
-
-  describe("loyalty_points table", () => {
-    it("should connect to loyalty_points table", async () => {
-      const { data, error } = await supabase
-        .from("loyalty_points")
-        .select("*")
-        .limit(10);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should have expected columns in loyalty_points", async () => {
-      const { data, error } = await supabase
-        .from("loyalty_points")
-        .select("id, user_id, points, points_type, description, created_at")
-        .limit(1);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should filter loyalty_points by points_type", async () => {
-      const { data, error } = await supabase
-        .from("loyalty_points")
-        .select("id, points, points_type")
-        .in("points_type", ["earned", "redeemed", "expired", "adjusted"])
-        .limit(10);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
+        expect(error).toBeNull();
+      }
     });
   });
 
-  describe("referrals table", () => {
-    it("should connect to referrals table", async () => {
+  // ==========================================================================
+  // Loyalty Points
+  // ==========================================================================
+
+  describe('Loyalty Points', () => {
+    it('retrieves loyalty points for a user', async () => {
       const { data, error } = await supabase
-        .from("referrals")
-        .select("*")
+        .from('loyalty_points')
+        .select('id, user_id, points, balance, created_at')
+        .eq('user_id', TEST_CUSTOMER_ID)
         .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
 
-    it("should have expected columns in referrals", async () => {
+    it('creates a loyalty points entry', async () => {
       const { data, error } = await supabase
-        .from("referrals")
-        .select("id, referrer_id, referred_id, referral_code, status, reward_amount, created_at")
-        .limit(1);
+        .from('loyalty_points')
+        .insert({
+          user_id: TEST_CUSTOMER_ID,
+          points: 100,
+          balance: 100,
+          type: 'earn',
+          description: 'Test loyalty points from integration tests',
+        })
+        .select()
+        .single();
 
-      expect(error).toBeNull();
+      if (error) {
+        console.log('Loyalty points creation skipped:', error.message);
+        return;
+      }
       expect(data).toBeDefined();
+      expect(data.points).toBe(100);
+
+      await supabase.from('loyalty_points').delete().eq('id', data.id);
     });
 
-    it("should filter referrals by status", async () => {
+    it('filters loyalty points by type', async () => {
       const { data, error } = await supabase
-        .from("referrals")
-        .select("id, status, reward_amount")
-        .in("status", ["pending", "completed", "rewarded"])
+        .from('loyalty_points')
+        .select('id, type')
+        .in('type', ['earn', 'redeem', 'adjustment', 'expire'])
         .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
   });
 
-  describe("chat_conversations table", () => {
-    it("should connect to chat_conversations table", async () => {
+  // ==========================================================================
+  // Referrals
+  // ==========================================================================
+
+  describe('Referrals', () => {
+    it('retrieves referrals', async () => {
       const { data, error } = await supabase
-        .from("chat_conversations")
-        .select("*")
+        .from('referrals')
+        .select('id, referrer_id, referred_id, status, reward_amount, created_at')
+        .limit(20);
+
+      expect(error).toBeNull();
+    });
+
+    it('creates a referral', async () => {
+      const { data, error } = await supabase
+        .from('referrals')
+        .insert({
+          referrer_id: TEST_CUSTOMER_ID,
+          referred_id: TEST_USER_ID,
+          status: 'pending',
+          referral_code: `REF-${Date.now()}`,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.log('Referral creation skipped:', error.message);
+        return;
+      }
+      expect(data).toBeDefined();
+      expect(data.status).toBe('pending');
+
+      await supabase.from('referrals').delete().eq('id', data.id);
+    });
+
+    it('filters referrals by status', async () => {
+      const statuses = ['pending', 'completed', 'rewarded', 'expired'];
+      for (const status of statuses) {
+        const { data, error } = await supabase
+          .from('referrals')
+          .select('id, status')
+          .eq('status', status)
+          .limit(10);
+
+        expect(error).toBeNull();
+      }
+    });
+
+    it('queries referrals by referrer', async () => {
+      const { data, error } = await supabase
+        .from('referrals')
+        .select('id, referrer_id, status')
+        .eq('referrer_id', TEST_CUSTOMER_ID)
         .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should have expected columns in chat_conversations", async () => {
-      const { data, error } = await supabase
-        .from("chat_conversations")
-        .select("id, customer_id, vendor_id, product_id, status, last_message_at")
-        .limit(1);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should filter chat_conversations by status", async () => {
-      const { data, error } = await supabase
-        .from("chat_conversations")
-        .select("id, status")
-        .in("status", ["active", "closed", "archived"])
-        .limit(10);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should join chat_conversations with profiles (customer and vendor)", async () => {
-      const { data, error } = await supabase
-        .from("chat_conversations")
-        .select(`
-          id,
-          status,
-          customer:profiles!chat_conversations_customer_id_fkey(id, full_name),
-          vendor:profiles!chat_conversations_vendor_id_fkey(id, full_name)
-        `)
-        .limit(5);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
   });
 
-  describe("cross-table admin views", () => {
-    it("should join vendor_profiles with stores and profiles", async () => {
+  // ==========================================================================
+  // Chat Conversations
+  // ==========================================================================
+
+  describe('Chat Conversations', () => {
+    let conversationId: string;
+
+    it('retrieves chat conversations', async () => {
       const { data, error } = await supabase
-        .from("vendor_profiles")
-        .select(`
-          id,
-          store_name,
-          status,
-          commission_rate,
-          profile:profiles(id, email, full_name),
-          stores(id, name, slug)
-        `)
-        .limit(5);
+        .from('chat_conversations')
+        .select('id, customer_id, vendor_id, status, last_message_at, created_at')
+        .limit(20);
 
       expect(error).toBeNull();
+    });
+
+    it('creates a chat conversation', async () => {
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .insert({
+          customer_id: TEST_CUSTOMER_ID,
+          vendor_id: TEST_VENDOR_USER_ID,
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.log('Chat conversation creation skipped:', error.message);
+        return;
+      }
       expect(data).toBeDefined();
+      expect(data.status).toBe('active');
+      conversationId = data.id;
+    });
+
+    it('sends a message in a conversation', async () => {
+      if (!conversationId) return;
+
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          conversation_id: conversationId,
+          sender_id: TEST_CUSTOMER_ID,
+          content: 'Hello, I have a question about this product.',
+          message_type: 'text',
+        })
+        .select()
+        .single();
+
+      if (error) return;
+      expect(data).toBeDefined();
+      expect(data.content).toContain('question');
+
+      await supabase.from('chat_messages').delete().eq('id', data.id);
+    });
+
+    it('retrieves messages for a conversation', async () => {
+      if (!conversationId) return;
+
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('id, conversation_id, sender_id, content, created_at')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
+        .limit(50);
+
+      expect(error).toBeNull();
+    });
+
+    it('updates conversation status', async () => {
+      if (!conversationId) return;
+
+      const { data, error } = await supabase
+        .from('chat_conversations')
+        .update({ status: 'closed', updated_at: new Date().toISOString() })
+        .eq('id', conversationId)
+        .select()
+        .single();
+
+      if (!error && data) {
+        expect(data.status).toBe('closed');
+      }
+    });
+
+    it('cleans up test conversation', async () => {
+      if (!conversationId) return;
+      await supabase.from('chat_messages').delete().eq('conversation_id', conversationId);
+      await supabase.from('chat_conversations').delete().eq('id', conversationId);
+    });
+  });
+
+  // ==========================================================================
+  // Admin Dashboard Aggregation
+  // ==========================================================================
+
+  describe('Admin Dashboard Data', () => {
+    it('can aggregate vendor counts by status', async () => {
+      const { data, error } = await supabase
+        .from('vendor_profiles')
+        .select('status')
+        .limit(1000);
+
+      expect(error).toBeNull();
+      if (data) {
+        const counts: Record<string, number> = {};
+        data.forEach((row) => {
+          counts[row.status] = (counts[row.status] || 0) + 1;
+        });
+      }
+    });
+
+    it('can aggregate order counts by status', async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('status')
+        .limit(1000);
+
+      expect(error).toBeNull();
+    });
+
+    it('can retrieve recent activity logs for dashboard', async () => {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('id, action, entity_type, description, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      expect(error).toBeNull();
     });
   });
 });

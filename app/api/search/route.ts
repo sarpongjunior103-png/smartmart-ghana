@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@/lib/supabase/server';
 import { spellCorrect } from '@/lib/search/spell-correct';
 
-// GET /api/search?q=...&category=...&minPrice=...&maxPrice=...&rating=...&sort=...&page=...&limit=...&autocomplete=true
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -18,7 +17,6 @@ export async function GET(req: NextRequest) {
 
     const supabase = getSupabaseServerClient();
 
-    // Autocomplete mode — return quick suggestions
     if (autocomplete && q.length >= 2) {
       const { data: suggestions } = await supabase
         .from('products')
@@ -37,32 +35,25 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Build the main search query
     let query = supabase
       .from('products')
       .select('*', { count: 'exact' })
       .eq('status', 'published');
 
-    // Text search with spell correction (simple fuzzy match)
     if (q) {
       const corrected = spellCorrect(q);
       const searchTerm = corrected !== q ? corrected : q;
       query = query.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%,brand.ilike.%${searchTerm}%,tags.cs.{${searchTerm}}`);
     }
 
-    // Category filter
     if (category) {
       query = query.eq('category_id', category);
     }
 
-    // Price filters
     if (minPrice) query = query.gte('price', parseFloat(minPrice));
     if (maxPrice) query = query.lte('price', parseFloat(maxPrice));
-
-    // Rating filter
     if (minRating) query = query.gte('rating', parseFloat(minRating));
 
-    // Sorting
     switch (sort) {
       case 'price_low':
         query = query.order('price', { ascending: true });
@@ -86,7 +77,6 @@ export async function GET(req: NextRequest) {
         break;
     }
 
-    // Pagination
     const from = (page - 1) * limit;
     const to = from + limit - 1;
     query = query.range(from, to);
@@ -95,7 +85,6 @@ export async function GET(req: NextRequest) {
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    // Get popular searches (static for now; could be tracked in DB)
     const popularSearches = ['phones', 'laptops', 'shoes', 'fashion', 'groceries', 'electronics'];
 
     return NextResponse.json({

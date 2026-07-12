@@ -1,4 +1,6 @@
 import './globals.css';
+import { Footer } from '@/components/Footer';
+import { CONTACT } from '@/lib/contact';
 
 export const metadata = {
   title: 'SmartMart Ghana — Multi-Vendor Marketplace',
@@ -12,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Footer />
+      </body>
     </html>
   );
 }

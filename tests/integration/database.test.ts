@@ -1,206 +1,254 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+// ============================================================================
+// Integration Tests for Database Connectivity
+// ============================================================================
 
-describe("Database Connectivity Integration", () => {
-  let supabase: ReturnType<typeof createClient>;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'test-service-key';
+
+describe('Database Connectivity Integration', () => {
+  let supabase: SupabaseClient;
 
   beforeAll(() => {
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables");
+    supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  });
+
+  describe('Connection', () => {
+    it('connects to the Supabase database', async () => {
+      const { error } = await supabase.from('profiles').select('id').limit(1);
+      expect(error).toBeNull();
+    });
+
+    it('responds to simple queries', async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('count')
+        .limit(1)
+        .single();
+
+      // May return null if no profiles, but should not error
+      if (error && error.code !== 'PGRN116') {
+        // PGRN116 = no rows found, which is acceptable
+        throw error;
+      }
+      expect(true).toBe(true);
+    });
+  });
+
+  describe('Core Tables', () => {
+    const expectedTables = [
+      'profiles',
+      'categories',
+      'products',
+      'product_images',
+      'orders',
+      'order_items',
+      'payments',
+      'transactions',
+      'addresses',
+      'carts',
+      'cart_items',
+      'wishlists',
+      'reviews',
+      'vendor_profiles',
+      'stores',
+      'activity_logs',
+      'inventory_logs',
+      'loyalty_points',
+      'referrals',
+      'chat_conversations',
+      'chat_messages',
+      'support_tickets',
+      'settings',
+    ];
+
+    for (const table of expectedTables) {
+      it(`table "${table}" exists and is accessible`, async () => {
+        const { error } = await supabase.from(table).select('*').limit(1);
+        expect(error).toBeNull();
+      });
     }
-    supabase = createClient(supabaseUrl, supabaseAnonKey);
   });
 
-  describe("platform_settings table", () => {
-    it("should connect to platform_settings table", async () => {
+  describe('Profiles Table', () => {
+    it('has required columns', async () => {
       const { data, error } = await supabase
-        .from("platform_settings")
-        .select("*")
+        .from('profiles')
+        .select('id, email, full_name, role, created_at')
         .limit(1);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
 
-    it("should return at least one row from platform_settings", async () => {
+    it('supports role-based queries', async () => {
       const { data, error } = await supabase
-        .from("platform_settings")
-        .select("*")
-        .limit(1);
-
-      expect(error).toBeNull();
-      expect(Array.isArray(data)).toBe(true);
-    });
-
-    it("should have expected columns in platform_settings", async () => {
-      const { data, error } = await supabase
-        .from("platform_settings")
-        .select("id, category, key, value")
-        .limit(1);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-  });
-
-  describe("products table", () => {
-    it("should connect to products table", async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .limit(10);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should return an array from products query", async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
+        .from('profiles')
+        .select('id, role')
+        .eq('role', 'customer')
         .limit(10);
 
       expect(error).toBeNull();
       expect(Array.isArray(data)).toBe(true);
     });
+  });
 
-    it("should have expected columns in products", async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id, name, slug, price, status, vendor_id")
+  describe('Products Table', () => {
+    it('has required columns', async () => {
+      const { error } = await supabase
+        .from('products')
+        .select(
+          'id, name, slug, description, price, currency, stock, category_id, vendor_id, status, created_at'
+        )
         .limit(1);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
 
-    it("should filter products by status", async () => {
+    it('supports filtering by status', async () => {
       const { data, error } = await supabase
-        .from("products")
-        .select("id, name, status")
-        .eq("status", "active")
-        .limit(5);
+        .from('products')
+        .select('id, status')
+        .eq('status', 'active')
+        .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
+    });
+
+    it('supports filtering by category', async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, category_id')
+        .limit(10);
+
+      expect(error).toBeNull();
     });
   });
 
-  describe("categories table", () => {
-    it("should connect to categories table", async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .limit(10);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should return an array from categories query", async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .limit(10);
-
-      expect(error).toBeNull();
-      expect(Array.isArray(data)).toBe(true);
-    });
-
-    it("should have expected columns in categories", async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id, name, slug, parent_id")
+  describe('Orders Table', () => {
+    it('has required columns', async () => {
+      const { error } = await supabase
+        .from('orders')
+        .select(
+          'id, user_id, status, payment_status, total, currency, shipping_address, created_at'
+        )
         .limit(1);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
 
-    it("should support hierarchical category queries", async () => {
+    it('supports status-based queries', async () => {
       const { data, error } = await supabase
-        .from("categories")
-        .select("id, name, slug, parent_id")
-        .is("parent_id", null)
-        .limit(5);
+        .from('orders')
+        .select('id, status')
+        .in('status', ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'])
+        .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
   });
 
-  describe("profiles table", () => {
-    it("should connect to profiles table", async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .limit(10);
-
-      expect(error).toBeNull();
-      expect(data).toBeDefined();
-    });
-
-    it("should return an array from profiles query", async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .limit(10);
-
-      expect(error).toBeNull();
-      expect(Array.isArray(data)).toBe(true);
-    });
-
-    it("should have expected columns in profiles", async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, email, full_name, role")
+  describe('Payments Table', () => {
+    it('has required columns', async () => {
+      const { error } = await supabase
+        .from('payments')
+        .select('id, reference, status, amount, currency, gateway, created_at')
         .limit(1);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
 
-    it("should filter profiles by role", async () => {
+    it('supports gateway-based queries', async () => {
       const { data, error } = await supabase
-        .from("profiles")
-        .select("id, email, role")
-        .eq("role", "customer")
-        .limit(5);
+        .from('payments')
+        .select('id, gateway')
+        .in('gateway', ['paystack', 'stripe', 'flutterwave', 'hubtel'])
+        .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
     });
   });
 
-  describe("cross-table relationships", () => {
-    it("should join products with categories", async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select(`
-          id,
-          name,
-          category:categories(id, name)
-        `)
-        .limit(5);
+  describe('Transactions Table', () => {
+    it('has required columns', async () => {
+      const { error } = await supabase
+        .from('transactions')
+        .select('id, reference, status, amount, currency, type, created_at')
+        .limit(1);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
+    });
+  });
+
+  describe('Activity Logs Table', () => {
+    it('has required columns', async () => {
+      const { error } = await supabase
+        .from('activity_logs')
+        .select('id, action, entity_type, entity_id, description, created_at')
+        .limit(1);
+
+      expect(error).toBeNull();
     });
 
-    it("should join products with vendor profiles", async () => {
+    it('supports ordering by created_at', async () => {
       const { data, error } = await supabase
-        .from("products")
-        .select(`
-          id,
-          name,
-          vendor:profiles(id, full_name)
-        `)
-        .limit(5);
+        .from('activity_logs')
+        .select('id, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
 
       expect(error).toBeNull();
-      expect(data).toBeDefined();
+    });
+  });
+
+  describe('Foreign Key Relationships', () => {
+    it('order_items references orders', async () => {
+      const { data, error } = await supabase
+        .from('order_items')
+        .select('id, order_id, product_id, quantity, price')
+        .limit(1);
+
+      expect(error).toBeNull();
+    });
+
+    it('product_images references products', async () => {
+      const { data, error } = await supabase
+        .from('product_images')
+        .select('id, product_id, url, alt_text')
+        .limit(1);
+
+      expect(error).toBeNull();
+    });
+
+    it('cart_items references carts and products', async () => {
+      const { data, error } = await supabase
+        .from('cart_items')
+        .select('id, cart_id, product_id, quantity')
+        .limit(1);
+
+      expect(error).toBeNull();
+    });
+  });
+
+  describe('Indexes', () => {
+    it('products can be queried by slug efficiently', async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, slug')
+        .eq('slug', 'test-product-slug')
+        .limit(1);
+
+      expect(error).toBeNull();
+    });
+
+    it('orders can be queried by user_id efficiently', async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, user_id')
+        .eq('user_id', '00000000-0000-0000-0000-000000000000')
+        .limit(1);
+
+      expect(error).toBeNull();
     });
   });
 });

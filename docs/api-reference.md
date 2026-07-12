@@ -1,176 +1,147 @@
-# SmartMart Ghana — API Reference
+# API Reference
 
-This document provides a comprehensive reference for all APIs, edge functions, database tables, and security policies in the SmartMart Ghana platform.
+This document provides a comprehensive reference for SmartMart's APIs, edge functions, database schema, and security policies.
 
 ---
 
 ## Table of Contents
 
-1. [Health Check API](#1-health-check-api)
-2. [Search API](#2-search-api)
-3. [Payment Webhooks](#3-payment-webhooks)
-4. [Send Email Edge Function](#4-send-email-edge-function)
-5. [Database Tables](#5-database-tables)
-6. [Row Level Security (RLS) Policies](#6-row-level-security-rls-policies)
-7. [Rate Limiting](#7-rate-limiting)
-8. [Error Handling](#8-error-handling)
+1. [Health Check API](#health-check-api)
+2. [Search API](#search-api)
+3. [Payment Webhooks](#payment-webhooks)
+4. [Send Email Function](#send-email-function)
+5. [Database Tables](#database-tables)
+6. [Row Level Security (RLS) Policies](#row-level-security-rls-policies)
+7. [Rate Limiting](#rate-limiting)
+8. [Error Handling](#error-handling)
+9. [Support](#support)
 
 ---
 
-## 1. Health Check API
+## Health Check API
 
 ### `GET /api/health`
 
-Returns the health status of the application and its dependencies.
+Returns the health status of the SmartMart application, including database connectivity and uptime.
 
 #### Request
 
-```
-GET /api/health
+```http
+GET /api/health HTTP/1.1
+Host: smartmart.com
 ```
 
-No authentication required. No request body or parameters.
+No authentication required.
 
-#### Response (200 OK)
+#### Response
 
 ```json
 {
   "status": "healthy",
-  "timestamp": "2024-01-15T10:30:00.000Z",
-  "service": "smartmart-ghana",
+  "service": "smartmart",
   "version": "1.0.0",
-  "database": {
-    "status": "connected"
-  }
+  "timestamp": "2024-01-15T10:30:00.000Z",
+  "uptime": 3600,
+  "database": "connected"
 }
 ```
-
-#### Response (503 Service Unavailable)
-
-```json
-{
-  "status": "unhealthy",
-  "timestamp": "2024-01-15T10:30:00.000Z",
-  "service": "smartmart-ghana",
-  "version": "1.0.0",
-  "database": {
-    "status": "disconnected",
-    "error": "Connection refused"
-  }
-}
-```
-
-#### Response Fields
 
 | Field | Type | Description |
-|------|------|-------------|
-| `status` | string | `"healthy"` or `"unhealthy"` |
-| `timestamp` | string (ISO 8601) | Current server time |
-| `service` | string | Application name |
+|---|---|---|
+| `status` | string | `"healthy"` or `"degraded"` |
+| `service` | string | Service name (`"smartmart"`) |
 | `version` | string | Application version |
-| `database.status` | string | Database connection status |
-| `database.error` | string | Error message (if unhealthy) |
+| `timestamp` | string | ISO 8601 timestamp |
+| `uptime` | number | Uptime in seconds |
+| `database` | string | Database connection status |
+
+#### Status Codes
+
+| Code | Description |
+|---|---|
+| 200 | Service is healthy |
+| 503 | Service is degraded or unhealthy |
 
 ---
 
-## 2. Search API
+## Search API
 
 ### `GET /api/search`
 
-Search for products with spell correction and filtering.
+Search for products with spell correction, filtering, and sorting.
 
 #### Query Parameters
 
 | Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
+|---|---|---|---|
 | `q` | string | — | Search query (required) |
-| `category` | string | — | Filter by category slug |
-| `minPrice` | number | — | Minimum price filter |
-| `maxPrice` | number | — | Maximum price filter |
+| `category` | string | — | Filter by category ID |
+| `minPrice` | number | — | Minimum price |
+| `maxPrice` | number | — | Maximum price |
 | `sort` | string | `relevance` | Sort order: `relevance`, `price_asc`, `price_desc`, `newest`, `rating` |
-| `page` | number | `1` | Page number for pagination |
-| `limit` | number | `20` | Results per page (max 100) |
+| `page` | number | 1 | Page number |
+| `limit` | number | 20 | Results per page (max 100) |
 
 #### Request
 
-```
-GET /api/search?q=laptob&category=electronics&minPrice=500&maxPrice=5000&sort=price_asc&page=1&limit=20
+```http
+GET /api/search?q=wireless+headphones&category=electronics&sort=price_asc&page=1&limit=20 HTTP/1.1
+Host: smartmart.com
 ```
 
-#### Response (200 OK)
+#### Response
 
 ```json
 {
   "results": [
     {
-      "id": "uuid",
-      "name": "Dell Laptop",
-      "slug": "dell-laptop",
-      "description": "High-performance laptop",
-      "price": 3500.00,
+      "id": "prod-001",
+      "name": "Wireless Bluetooth Headphones",
+      "slug": "wireless-bluetooth-headphones",
+      "price": 299.99,
       "currency": "GHS",
-      "image": "https://res.cloudinary.com/...",
-      "vendor": {
-        "id": "uuid",
-        "store_name": "TechHub Ghana"
-      },
-      "category": {
-        "id": "uuid",
-        "name": "Electronics",
-        "slug": "electronics"
-      },
+      "image": "https://res.cloudinary.com/smartmart/image/upload/v1/products/headphones.jpg",
+      "vendor": "AudioMax Store",
       "rating": 4.5,
-      "review_count": 23,
-      "status": "active"
+      "reviewCount": 128
     }
   ],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 145,
-    "totalPages": 8
-  },
-  "correctedQuery": "laptop"
+  "total": 145,
+  "page": 1,
+  "limit": 20,
+  "totalPages": 8,
+  "query": "wireless headphones",
+  "correctedQuery": null
 }
 ```
 
 #### Spell Correction
 
-The search API includes automatic spell correction:
-- Input: `"fone"` → Corrected: `"phone"`
-- Input: `"laptob"` → Corrected: `"laptop"`
-- Input: `"snekers"` → Corrected: `"sneakers"`
-- Case-insensitive: `"FONE"` → `"phone"`
-- Multiple words: `"fone laptob"` → `"phone laptop"`
-- Correct words remain unchanged
-- Empty input returns empty results
+If the query contains misspellings, the API corrects them automatically:
 
-#### Response Fields
+```json
+{
+  "query": "fone",
+  "correctedQuery": "phone",
+  "results": [...]
+}
+```
 
-| Field | Type | Description |
-|------|------|-------------|
-| `results` | array | Array of product objects |
-| `results[].id` | string (UUID) | Product ID |
-| `results[].name` | string | Product name |
-| `results[].slug` | string | URL-friendly identifier |
-| `results[].price` | number | Product price |
-| `results[].vendor` | object | Vendor information |
-| `results[].category` | object | Category information |
-| `results[].rating` | number | Average rating (0-5) |
-| `results[].review_count` | number | Total number of reviews |
-| `pagination.page` | number | Current page |
-| `pagination.limit` | number | Results per page |
-| `pagination.total` | number | Total matching results |
-| `pagination.totalPages` | number | Total number of pages |
-| `correctedQuery` | string \| null | Spell-corrected query (null if no correction) |
+#### Status Codes
+
+| Code | Description |
+|---|---|
+| 200 | Search results returned |
+| 400 | Invalid query parameters |
+| 500 | Internal server error |
 
 ---
 
-## 3. Payment Webhooks
+## Payment Webhooks
 
-All payment webhooks are implemented as Supabase Edge Functions. They receive payment events from payment gateways and update the database accordingly.
+All payment webhooks are implemented as Supabase Edge Functions and accept POST requests with JSON payloads.
 
-### 3.1 Paystack Webhook
+### Paystack Webhook
 
 #### `POST /functions/v1/paystack-webhook`
 
@@ -178,244 +149,147 @@ Handles Paystack payment events.
 
 #### Headers
 
-| Header | Required | Description |
-|--------|----------|-------------|
-| `x-paystack-signature` | Yes | Paystack webhook signature for verification |
-| `Content-Type` | Yes | `application/json` |
+| Header | Description |
+|---|---|
+| `X-Paystack-Signature` | HMAC SHA512 signature of the payload |
 
-#### Supported Events
+#### Handled Events
 
 | Event | Action |
-|-------|--------|
-| `charge.success` | Updates payment status to `success`, confirms order, logs activity |
-| `charge.failed` | Updates payment status to `failed`, logs activity |
-| `refund.processed` | Updates payment status to `refunded`, logs activity |
+|---|---|
+| `charge.success` | Mark payment as success, confirm order |
+| `charge.failed` | Mark payment as failed, cancel order |
+| `transfer.success` | Mark transfer as success |
+| `transfer.failed` | Mark transfer as failed |
+| `refund.processed` | Mark payment as refunded |
 
-#### Request Body (charge.success)
+#### Database Updates
+
+On successful payment:
+1. `payments` table: status → `success`
+2. `transactions` table: status → `success`
+3. `orders` table: payment_status → `paid`, status → `confirmed`
+4. `activity_logs` table: new entry with `payment.success`
+
+#### Response
 
 ```json
 {
+  "message": "Webhook processed",
   "event": "charge.success",
-  "data": {
-    "reference": "SM-12345-ABC",
-    "amount": 350000,
-    "currency": "GHS",
-    "status": "success",
-    "customer": {
-      "email": "customer@example.com"
-    }
-  }
-}
-```
-
-#### Response (200 OK)
-
-```json
-{
+  "reference": "ref_xxxxxxxx",
   "status": "success"
 }
 ```
 
-#### Response (401 Unauthorized)
-
-```json
-{
-  "error": "Missing signature"
-}
-```
-
-#### Database Updates
-
-On `charge.success`:
-1. Updates `payments` table: `status` → `success`, `gateway_response` → event data
-2. Updates `transactions` table: `status` → `success`
-3. Updates `orders` table: `status` → `confirmed` (if payment has an order)
-4. Inserts into `activity_logs`: action `payment_success`
-
-On `charge.failed`:
-1. Updates `payments` table: `status` → `failed`
-2. Updates `transactions` table: `status` → `failed`
-3. Inserts into `activity_logs`: action `payment_failed`
-
-On `refund.processed`:
-1. Updates `payments` table: `status` → `refunded`
-2. Updates `transactions` table: `status` → `refunded`
-3. Inserts into `activity_logs`: action `payment_refunded`
-
 ---
 
-### 3.2 Stripe Webhook
+### Stripe Webhook
 
 #### `POST /functions/v1/stripe-webhook`
 
 Handles Stripe payment events.
 
-#### Supported Events
+#### Headers
+
+| Header | Description |
+|---|---|
+| `Stripe-Signature` | Stripe webhook signature |
+
+#### Handled Events
 
 | Event | Action |
-|-------|--------|
-| `checkout.session.completed` | Updates payment status to `success`, confirms order |
-| `charge.refunded` | Updates payment status to `refunded` |
-| `checkout.session.expired` | Updates payment status to `failed` |
+|---|---|
+| `checkout.session.completed` | Mark payment as success, confirm order |
+| `charge.refunded` | Mark payment as refunded, update order |
+| `checkout.session.expired` | Mark payment as expired, cancel order |
 
-#### Request Body (checkout.session.completed)
-
-```json
-{
-  "type": "checkout.session.completed",
-  "data": {
-    "object": {
-      "client_reference_id": "SM-12345-ABC",
-      "amount_total": 350000,
-      "currency": "ghs",
-      "payment_status": "paid"
-    }
-  }
-}
-```
-
-#### Response (200 OK)
+#### Response
 
 ```json
 {
-  "received": true
+  "received": true,
+  "type": "checkout.session.completed"
 }
 ```
-
-#### Reference Mapping
-
-- Stripe uses `client_reference_id` to map to the SmartMart payment reference
-- For refunds, the reference is stored in `charge.metadata.reference`
 
 ---
 
-### 3.3 Flutterwave Webhook
+### Flutterwave Webhook
 
 #### `POST /functions/v1/flutterwave-webhook`
 
 Handles Flutterwave payment events.
 
-#### Supported Events
+#### Headers
+
+| Header | Description |
+|---|---|
+| `verif-hash` | Webhook verification hash |
+
+#### Handled Events
 
 | Event | Action |
-|-------|--------|
-| `charge.completed` (status: `successful`) | Updates payment status to `success` |
-| `charge.completed` (status: other) | Updates payment status to `failed` |
-| `refund.completed` | Updates payment status to `refunded` |
+|---|---|
+| `charge.completed` | Mark payment as success/failed based on status, confirm order |
+| `refund.completed` | Mark payment as refunded, update order |
 
-#### Request Body (charge.completed)
-
-```json
-{
-  "event": "charge.completed",
-  "data": {
-    "tx_ref": "SM-12345-ABC",
-    "amount": 3500,
-    "currency": "GHS",
-    "status": "successful"
-  }
-}
-```
-
-#### Response (200 OK)
+#### Response
 
 ```json
 {
-  "status": "success"
+  "message": "Webhook processed",
+  "event": "charge.completed"
 }
 ```
-
-#### Reference Mapping
-
-- Flutterwave uses `tx_ref` as the transaction reference
-- Status `"successful"` maps to payment status `success`; any other status maps to `failed`
 
 ---
 
-### 3.4 Hubtel Webhook
+### Hubtel Webhook
 
 #### `POST /functions/v1/hubtel-webhook`
 
-Handles Hubtel payment events.
+Handles Hubtel mobile money payment events.
 
-#### Supported Events
+#### Handled Statuses
 
-| Event Condition | Action |
-|----------------|--------|
-| `status === "Success"` or `Data.Status === "Success"` | Updates payment status to `success` |
-| `status === "Failed"` or `Data.Status === "Failed"` | Updates payment status to `failed` |
+| Status | Action |
+|---|---|
+| `Success` | Mark payment as success, confirm order |
+| `Failed` | Mark payment as failed, cancel order |
 
-#### Request Body (Success)
-
-```json
-{
-  "status": "Success",
-  "ClientReference": "SM-12345-ABC",
-  "Amount": 3500,
-  "Currency": "GHS"
-}
-```
-
-#### Alternative Request Body (with Data wrapper)
+#### Response
 
 ```json
 {
-  "Data": {
-    "Status": "Success",
-    "ClientReference": "SM-12345-ABC",
-    "Amount": 3500
-  }
-}
-```
-
-#### Response (200 OK)
-
-```json
-{
+  "message": "Webhook processed",
   "status": "success"
 }
 ```
 
-#### Reference Mapping
-
-- Hubtel uses `ClientReference` (or `Data.ClientReference`) as the payment reference
-- The webhook checks both top-level and `Data`-nested fields for compatibility
-
 ---
 
-### Common Webhook Behavior
-
-All four webhook handlers share the same `updatePaymentStatus` function that:
-
-1. **Looks up the payment** by `gateway_reference` in the `payments` table
-2. **Updates the payment record** with the new status and gateway response
-3. **Updates the corresponding transaction** in the `transactions` table
-4. **Confirms the order** (if status is `success` and the payment has an `order_id`)
-5. **Logs the activity** (Paystack webhooks also insert into `activity_logs`)
-
----
-
-## 4. Send Email Edge Function
+## Send Email Function
 
 ### `POST /functions/v1/send-email`
 
-Sends transactional emails using the Resend API with pre-built HTML templates.
-
-#### Request
-
-```
-POST /functions/v1/send-email
-Content-Type: application/json
-```
+Sends branded transactional emails via the Resend API.
 
 #### Request Body
 
 ```json
 {
   "to": "customer@example.com",
-  "template": "welcome",
+  "template": "order_confirmation",
   "data": {
-    "name": "John Doe"
+    "name": "John Doe",
+    "orderId": "ORD-12345",
+    "items": [
+      { "name": "Wireless Headphones", "quantity": 1, "price": 299.99 }
+    ],
+    "total": 299.99,
+    "currency": "GHS",
+    "shippingAddress": "123 Main St, Accra, Ghana"
   }
 }
 ```
@@ -423,395 +297,216 @@ Content-Type: application/json
 #### Parameters
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
+|---|---|---|---|
 | `to` | string | Yes | Recipient email address |
 | `template` | string | Yes | Template name (see below) |
-| `data` | object | No | Template variables |
+| `data` | object | No | Template-specific data |
 
 #### Available Templates
 
-| Template | Description | Data Fields |
-|----------|-------------|------------|
-| `welcome` | Welcome email for new users | `name` |
-| `email_verification` | Email verification with code | `name`, `code`, `verification_url` |
-| `password_reset` | Password reset link | `name`, `reset_url` |
-| `order_confirmation` | Order confirmation with items | `order_number`, `items[]`, `total`, `currency` |
-| `order_shipped` | Shipping notification | `order_number`, `tracking_number`, `carrier`, `tracking_url` |
-| `order_delivered` | Delivery confirmation | `order_number`, `review_url` |
-| `refund_notification` | Refund processed | `order_number`, `amount`, `currency`, `reason` |
-| `vendor_approval` | Vendor application approved | `name`, `store_name` |
-| `vendor_rejection` | Vendor application rejected | `name`, `reason` |
+| Template | Required Data | Description |
+|---|---|---|
+| `welcome` | `name` | Welcome email for new users |
+| `email_verification` | `name`, `verificationUrl` | Email verification link |
+| `password_reset` | `name`, `resetUrl` | Password reset link |
+| `order_confirmation` | `name`, `orderId`, `items`, `total`, `currency`, `shippingAddress` | Order confirmed |
+| `order_shipped` | `name`, `orderId`, `trackingNumber`, `carrier` | Order shipped with tracking |
+| `order_delivered` | `name`, `orderId` | Order delivered |
+| `refund_notification` | `name`, `orderId`, `refundAmount`, `currency`, `reason` | Refund processed |
+| `vendor_approval` | `name`, `storeName` | Vendor application approved |
+| `vendor_rejection` | `name`, `reason` | Vendor application rejected |
 
-#### Response (200 OK)
+#### Response
 
 ```json
 {
   "success": true,
-  "message": "Email 'welcome' sent to customer@example.com"
-}
-```
-
-#### Response (400 Bad Request)
-
-```json
-{
-  "error": "Missing required fields: 'to' and 'template' are required"
-}
-```
-
-```json
-{
-  "error": "Unknown template 'invalid_template'. Available: welcome, email_verification, password_reset, order_confirmation, order_shipped, order_delivered, refund_notification, vendor_approval, vendor_rejection"
-}
-```
-
-#### Response (500 Internal Server Error)
-
-```json
-{
-  "error": "EMAIL_API_KEY is not configured"
-}
-```
-
-```json
-{
-  "error": "Resend API error: ..."
+  "message": "Email sent successfully",
+  "template": "order_confirmation",
+  "to": "customer@example.com"
 }
 ```
 
 #### Environment Variables
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `EMAIL_API_KEY` | Yes | Resend API key |
-| `EMAIL_FROM` | No | From email address (defaults to noreply@domain) |
+| Variable | Description |
+|---|---|
+| `RESEND_API_KEY` | Resend API key |
+| `EMAIL_FROM` | Sender email (`smartmart304@gmail.com`) |
 
-#### Email Template Features
+All emails include the SmartMart contact information in the footer:
+- **Phone:** +233 55 162 1261
+- **Email:** smartmart304@gmail.com
 
-- All templates use SmartMart Ghana branded HTML styling
-- Responsive design for mobile and desktop email clients
-- Inline CSS for maximum email client compatibility
-- Primary color: `#0F766E` (teal)
-- Includes header with logo, content body, and footer
-- Call-to-action buttons in branded colors
+#### Status Codes
+
+| Code | Description |
+|---|---|
+| 200 | Email sent successfully |
+| 400 | Missing required fields or unknown template |
+| 405 | Method not allowed (only POST) |
+| 500 | Internal server error or Resend API failure |
 
 ---
 
-## 5. Database Tables
+## Database Tables
 
 ### Core Tables
 
-#### `profiles`
-Stores user profile information linked to Supabase Auth.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | References `auth.users.id` |
-| `email` | text | User email |
-| `full_name` | text | Full name |
-| `phone` | text | Phone number |
-| `avatar_url` | text | Profile image URL |
-| `role` | enum | `customer`, `vendor`, `admin` |
-| `created_at` | timestamptz | Registration date |
-| `updated_at` | timestamptz | Last update |
-
-#### `categories`
-Product categories with hierarchical structure.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Category ID |
-| `name` | text | Category name |
-| `slug` | text | URL slug |
-| `description` | text | Category description |
-| `parent_id` | UUID | Parent category (null for root) |
-| `image_url` | text | Category image |
-| `created_at` | timestamptz | Creation date |
-
-#### `products`
-Products listed by vendors.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Product ID |
-| `vendor_id` | UUID | References `profiles.id` |
-| `category_id` | UUID | References `categories.id` |
-| `name` | text | Product name |
-| `slug` | text | URL slug |
-| `description` | text | Full description |
-| `price` | numeric | Product price |
-| `currency` | text | Currency code (GHS) |
-| `stock_quantity` | integer | Available stock |
-| `status` | enum | `active`, `inactive`, `pending`, `rejected` |
-| `featured` | boolean | Featured on homepage |
-| `created_at` | timestamptz | Creation date |
-| `updated_at` | timestamptz | Last update |
-
-#### `product_images`
-Images for products (stored in Cloudinary).
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Image ID |
-| `product_id` | UUID | References `products.id` |
-| `url` | text | Cloudinary URL |
-| `alt_text` | text | Alt description |
-| `position` | integer | Display order |
-
-### Order System Tables
-
-#### `orders`
-Customer orders.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Order ID |
-| `order_number` | text | Human-readable order number |
-| `customer_id` | UUID | References `profiles.id` |
-| `total` | numeric | Order total |
-| `currency` | text | Currency code |
-| `status` | enum | `pending`, `confirmed`, `processing`, `shipped`, `delivered`, `cancelled`, `refunded` |
-| `payment_status` | enum | `pending`, `success`, `failed`, `refunded` |
-| `shipping_address` | jsonb | Shipping address |
-| `created_at` | timestamptz | Order date |
-
-#### `order_items`
-Individual items within an order.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Item ID |
-| `order_id` | UUID | References `orders.id` |
-| `product_id` | UUID | References `products.id` |
-| `quantity` | integer | Quantity ordered |
-| `price` | numeric | Price per unit at time of order |
-
-#### `payments`
-Payment records for orders.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Payment ID |
-| `order_id` | UUID | References `orders.id` |
-| `gateway` | enum | `paystack`, `stripe`, `flutterwave`, `hubtel` |
-| `gateway_reference` | text | Gateway transaction reference |
-| `amount` | numeric | Payment amount |
-| `currency` | text | Currency code |
-| `status` | enum | `pending`, `success`, `failed`, `refunded` |
-| `gateway_response` | jsonb | Raw gateway response |
-
-#### `transactions`
-Financial transaction ledger.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Transaction ID |
-| `transaction_reference` | text | Transaction reference |
-| `user_id` | UUID | References `profiles.id` |
-| `type` | enum | `payment`, `refund`, `payout`, `commission` |
-| `amount` | numeric | Transaction amount |
-| `currency` | text | Currency code |
-| `status` | enum | `pending`, `success`, `failed` |
-| `created_at` | timestamptz | Transaction date |
-
-#### `shipping`
-Shipping records for orders.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Shipping ID |
-| `order_id` | UUID | References `orders.id` |
-| `carrier` | text | Shipping carrier |
-| `tracking_number` | text | Tracking number |
-| `status` | enum | `pending`, `shipped`, `delivered` |
-| `shipping_cost` | numeric | Shipping cost |
-| `created_at` | timestamptz | Creation date |
+| Table | Description |
+|---|---|
+| `profiles` | User profiles (customers, vendors, admins) |
+| `categories` | Product categories |
+| `products` | Product listings |
+| `product_images` | Images for each product |
+| `orders` | Customer orders |
+| `order_items` | Individual items within an order |
+| `payments` | Payment records |
+| `transactions` | Transaction records (payments, refunds) |
+| `addresses` | User shipping addresses |
+| `carts` | Shopping carts |
+| `cart_items` | Items in shopping carts |
+| `wishlists` | User wishlists |
 
 ### Vendor Tables
 
-#### `vendor_profiles`
-Vendor-specific profile data.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Vendor profile ID |
-| `store_name` | text | Store name |
-| `status` | enum | `pending`, `approved`, `suspended` |
-| `commission_rate` | numeric | Commission percentage |
-| `payout_balance` | numeric | Available payout balance |
-| `business_address` | text | Business address |
-| `business_documents` | jsonb | Uploaded documents |
-
-#### `stores`
-Vendor store pages.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Store ID |
-| `vendor_id` | UUID | References `profiles.id` |
-| `name` | text | Store display name |
-| `slug` | text | URL slug |
-| `description` | text | Store description |
-| `logo_url` | text | Store logo |
-| `status` | enum | `active`, `paused`, `suspended` |
-
-#### `inventory_logs`
-Stock change audit trail.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Log ID |
-| `product_id` | UUID | References `products.id` |
-| `change_type` | enum | `restock`, `sale`, `adjustment`, `return` |
-| `quantity_change` | integer | Positive or negative change |
-| `previous_stock` | integer | Stock before change |
-| `new_stock` | integer | Stock after change |
-| `reason` | text | Reason for change |
-| `created_at` | timestamptz | Change date |
+| Table | Description |
+|---|---|
+| `vendor_profiles` | Vendor business profiles |
+| `stores` | Vendor storefronts |
+| `inventory_logs` | Inventory change history |
 
 ### Engagement Tables
 
-#### `reviews`
-Product reviews from customers.
+| Table | Description |
+|---|---|
+| `reviews` | Product reviews and ratings |
+| `loyalty_points` | Loyalty point transactions |
+| `referrals` | User referral records |
+| `chat_conversations` | Live chat conversations |
+| `chat_messages` | Individual chat messages |
+| `support_tickets` | Customer support tickets |
+
+### System Tables
+
+| Table | Description |
+|---|---|
+| `activity_logs` | Audit log of all system actions |
+| `settings` | Application settings (key-value store) |
+
+### Key Table Schemas
+
+#### `profiles`
 
 | Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Review ID |
-| `product_id` | UUID | References `products.id` |
-| `user_id` | UUID | References `profiles.id` |
-| `rating` | integer | 1-5 stars |
-| `comment` | text | Review text |
-| `created_at` | timestamptz | Review date |
+|---|---|---|
+| `id` | uuid | Primary key (references auth.users) |
+| `email` | text | User email |
+| `full_name` | text | Full name |
+| `role` | text | `customer`, `vendor`, or `admin` |
+| `avatar_url` | text | Profile image URL |
+| `phone` | text | Phone number |
+| `created_at` | timestamptz | Account creation time |
 
-#### `wishlist`
-Saved products by users.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Wishlist item ID |
-| `user_id` | UUID | References `profiles.id` |
-| `product_id` | UUID | References `products.id` |
-| `created_at` | timestamptz | Added date |
-
-#### `chat_conversations`
-Customer-vendor chat sessions.
+#### `products`
 
 | Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Conversation ID |
-| `customer_id` | UUID | References `profiles.id` |
-| `vendor_id` | UUID | References `profiles.id` |
-| `product_id` | UUID | References `products.id` (nullable) |
-| `status` | enum | `active`, `closed`, `archived` |
-| `last_message_at` | timestamptz | Last message time |
+|---|---|---|
+| `id` | uuid | Primary key |
+| `name` | text | Product name |
+| `slug` | text | URL-friendly identifier |
+| `description` | text | Product description |
+| `price` | numeric | Product price |
+| `currency` | text | Price currency |
+| `stock` | integer | Available quantity |
+| `category_id` | uuid | References categories |
+| `vendor_id` | uuid | References profiles (vendor) |
+| `status` | text | `active`, `draft`, `inactive` |
+| `created_at` | timestamptz | Creation time |
 
-#### `chat_messages`
-Individual messages within conversations.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Message ID |
-| `conversation_id` | UUID | References `chat_conversations.id` |
-| `sender_id` | UUID | References `profiles.id` |
-| `message` | text | Message content |
-| `attachments` | jsonb | Image attachments |
-| `created_at` | timestamptz | Message time |
-
-### Loyalty & Referral Tables
-
-#### `loyalty_points`
-Loyalty point transactions.
+#### `orders`
 
 | Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Entry ID |
-| `user_id` | UUID | References `profiles.id` |
-| `points` | integer | Points (positive for earned, negative for redeemed) |
-| `points_type` | enum | `earned`, `redeemed`, `expired`, `adjusted` |
-| `description` | text | Description |
-| `created_at` | timestamptz | Entry date |
+|---|---|---|
+| `id` | uuid | Primary key |
+| `user_id` | uuid | References profiles |
+| `status` | text | `pending`, `confirmed`, `processing`, `shipped`, `delivered`, `cancelled` |
+| `payment_status` | text | `pending`, `paid`, `failed`, `refunded`, `expired` |
+| `total` | numeric | Order total |
+| `currency` | text | Order currency |
+| `shipping_address` | text/jsonb | Shipping address |
+| `payment_reference` | text | Payment gateway reference |
+| `confirmed_at` | timestamptz | Confirmation time |
+| `created_at` | timestamptz | Order time |
 
-#### `referrals`
-Referral tracking.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Referral ID |
-| `referrer_id` | UUID | References `profiles.id` |
-| `referred_id` | UUID | References `profiles.id` |
-| `referral_code` | text | Unique referral code |
-| `status` | enum | `pending`, `completed`, `rewarded` |
-| `reward_amount` | numeric | Reward value |
-| `created_at` | timestamptz | Referral date |
-
-### Admin Tables
-
-#### `activity_logs`
-Audit log for all platform actions.
+#### `payments`
 
 | Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Log ID |
-| `user_id` | UUID | References `profiles.id` (nullable for system) |
-| `action` | text | Action identifier |
-| `entity_type` | text | Entity type |
-| `entity_id` | UUID | Entity ID |
-| `details` | jsonb | Additional details |
-| `created_at` | timestamptz | Action time |
-
-#### `platform_settings`
-Platform configuration settings.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Setting ID |
-| `category` | enum | `general`, `payment`, `shipping`, `tax`, `notification`, `security` |
-| `key` | text | Setting key |
-| `value` | text | Setting value |
-
-#### `support_tickets`
-Customer support tickets.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| `id` | UUID (PK) | Ticket ID |
-| `user_id` | UUID | References `profiles.id` |
-| `subject` | text | Ticket subject |
-| `description` | text | Issue description |
-| `status` | enum | `open`, `in_progress`, `resolved`, `closed` |
-| `priority` | enum | `low`, `medium`, `high`, `urgent` |
-| `category` | enum | `order`, `payment`, `account`, `product`, `other` |
-| `created_at` | timestamptz | Creation date |
+|---|---|---|
+| `id` | uuid | Primary key |
+| `reference` | text | Unique payment reference |
+| `status` | text | `pending`, `success`, `failed`, `refunded`, `expired` |
+| `amount` | numeric | Payment amount |
+| `currency` | text | Payment currency |
+| `gateway` | text | `paystack`, `stripe`, `flutterwave`, `hubtel` |
+| `user_id` | uuid | References profiles |
+| `created_at` | timestamptz | Creation time |
 
 ---
 
-## 6. Row Level Security (RLS) Policies
+## Row Level Security (RLS) Policies
 
-All tables have RLS enabled. Below are the policy patterns used across the platform.
+All tables have RLS enabled. Below are the key policies:
 
-### Policy Patterns
-
-#### Customer Access
+### Profiles
 
 ```sql
--- Customers can view their own data
-CREATE POLICY "users_select_own" ON orders
-  FOR SELECT USING (auth.uid() = customer_id);
+-- Users can view their own profile
+CREATE POLICY "Users can view own profile" ON profiles
+  FOR SELECT USING (auth.uid() = id);
 
--- Customers can insert their own records
-CREATE POLICY "users_insert_own" ON orders
-  FOR INSERT WITH CHECK (auth.uid() = customer_id);
+-- Users can update their own profile
+CREATE POLICY "Users can update own profile" ON profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+-- Admins can view all profiles
+CREATE POLICY "Admins can view all profiles" ON profiles
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
 ```
 
-#### Vendor Access
+### Products
 
 ```sql
+-- Anyone can view active products
+CREATE POLICY "Public can view active products" ON products
+  FOR SELECT USING (status = 'active');
+
 -- Vendors can manage their own products
-CREATE POLICY "vendors_manage_products" ON products
-  FOR ALL USING (auth.uid() = vendor_id);
+CREATE POLICY "Vendors can insert own products" ON products
+  FOR INSERT WITH CHECK (auth.uid() = vendor_id);
+
+CREATE POLICY "Vendors can update own products" ON products
+  FOR UPDATE USING (auth.uid() = vendor_id);
+
+CREATE POLICY "Vendors can delete own products" ON products
+  FOR DELETE USING (auth.uid() = vendor_id);
+```
+
+### Orders
+
+```sql
+-- Users can view their own orders
+CREATE POLICY "Users can view own orders" ON orders
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Users can create their own orders
+CREATE POLICY "Users can create own orders" ON orders
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Vendors can view orders containing their products
-CREATE POLICY "vendors_view_orders" ON orders
+CREATE POLICY "Vendors can view related orders" ON orders
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM order_items oi
@@ -819,63 +514,61 @@ CREATE POLICY "vendors_view_orders" ON orders
       WHERE oi.order_id = orders.id AND p.vendor_id = auth.uid()
     )
   );
-```
 
-#### Admin Access
-
-```sql
--- Admins have full access to all tables
-CREATE POLICY "admin_all_access" ON products
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM profiles
-      WHERE id = auth.uid() AND role = 'admin'
-    )
+-- Admins can view all orders
+CREATE POLICY "Admins can view all orders" ON orders
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
   );
 ```
 
-#### Public Read Access
+### Payments
 
 ```sql
--- Anyone can view active products
-CREATE POLICY "public_read_products" ON products
-  FOR SELECT USING (status = 'active');
+-- Users can view their own payments
+CREATE POLICY "Users can view own payments" ON payments
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Admins can view all payments
+CREATE POLICY "Admins can view all payments" ON payments
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
 ```
 
-### Table-Specific RLS Summary
+### Activity Logs
 
-| Table | SELECT | INSERT | UPDATE | DELETE |
-|-------|--------|--------|--------|--------|
-| `profiles` | Own profile + admin | Via auth trigger | Own + admin | Admin only |
-| `products` | Public (active) + vendor (own) + admin | Vendor + admin | Vendor (own) + admin | Vendor (own) + admin |
-| `orders` | Customer (own) + vendor (related) + admin | Customer | Vendor (status) + admin | Admin only |
-| `payments` | Customer (own) + admin | System + admin | System + admin | Admin only |
-| `reviews` | Public + customer (own) + admin | Customer (verified purchase) | Customer (own) + admin | Admin only |
-| `vendor_profiles` | Public (approved) + vendor (own) + admin | Customer (on apply) | Vendor (own) + admin | Admin only |
-| `activity_logs` | Admin only | System + authenticated | Admin only | Admin only |
-| `platform_settings` | Public (general) + admin | Admin only | Admin only | Admin only |
+```sql
+-- Admins can view all activity logs
+CREATE POLICY "Admins can view activity logs" ON activity_logs
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- Service role can insert logs (for edge functions)
+CREATE POLICY "Service can insert activity logs" ON activity_logs
+  FOR INSERT WITH CHECK (true);
+```
 
 ---
 
-## 7. Rate Limiting
+## Rate Limiting
 
 ### API Rate Limits
 
-| Endpoint | Authenticated | Anonymous |
-|----------|--------------|-----------|
-| `/api/search` | 60 req/min | 30 req/min |
-| `/api/health` | 120 req/min | 120 req/min |
-| Edge Functions | 30 req/min | 10 req/min |
-| Supabase Auth | 5 req/min | 5 req/min |
+| Endpoint Type | Rate Limit | Window |
+|---|---|---|
+| Public API (search, products) | 100 requests | per minute |
+| Authenticated API | 300 requests | per minute |
+| Webhook endpoints | 1000 requests | per minute |
+| Email sending | 10 requests | per minute |
 
 ### Rate Limit Headers
 
-All API responses include rate limit headers:
-
-```
-X-RateLimit-Limit: 60
-X-RateLimit-Remaining: 45
-X-RateLimit-Reset: 1705312200
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1705320600
 ```
 
 ### Rate Limit Exceeded (429)
@@ -890,95 +583,74 @@ X-RateLimit-Reset: 1705312200
 
 ---
 
-## 8. Error Handling
+## Error Handling
 
 ### Error Response Format
 
-All API errors follow a consistent JSON format:
+All API errors follow a consistent format:
 
 ```json
 {
-  "error": "Error type",
+  "error": "error_type",
   "message": "Human-readable error message",
-  "details": {}
+  "details": {
+    "field": "Additional context about the error"
+  }
 }
 ```
 
 ### HTTP Status Codes
 
 | Code | Description |
-|------|-------------|
+|---|---|
 | 200 | Success |
 | 201 | Created |
-| 400 | Bad Request (validation error) |
-| 401 | Unauthorized (not authenticated) |
-| 403 | Forbidden (insufficient permissions) |
-| 404 | Not Found |
-| 405 | Method Not Allowed |
-| 409 | Conflict (duplicate resource) |
-| 429 | Rate Limit Exceeded |
-| 500 | Internal Server Error |
-| 503 | Service Unavailable |
+| 204 | No content (success) |
+| 400 | Bad request — invalid input |
+| 401 | Unauthorized — authentication required or failed |
+| 403 | Forbidden — insufficient permissions |
+| 404 | Not found |
+| 405 | Method not allowed |
+| 409 | Conflict — duplicate resource |
+| 422 | Unprocessable entity — validation error |
+| 429 | Rate limit exceeded |
+| 500 | Internal server error |
+| 503 | Service unavailable |
 
-### Common Errors
+### Common Error Codes
 
-#### 400 Bad Request
+| Error | Description |
+|---|---|
+| `INVALID_INPUT` | Request body or parameters are invalid |
+| `UNAUTHORIZED` | Authentication token is missing or invalid |
+| `FORBIDDEN` | User does not have permission for this action |
+| `NOT_FOUND` | The requested resource does not exist |
+| `CONFLICT` | The resource already exists |
+| `VALIDATION_ERROR` | Input failed validation |
+| `RATE_LIMIT_EXCEEDED` | Too many requests |
+| `INTERNAL_ERROR` | An unexpected server error occurred |
+| `DATABASE_ERROR` | Database operation failed |
+| `PAYMENT_FAILED` | Payment processing failed |
+| `EMAIL_SEND_FAILED` | Email could not be sent |
 
-```json
-{
-  "error": "Validation error",
-  "message": "Missing required field: 'email'",
-  "details": {
-    "field": "email",
-    "rule": "required"
-  }
-}
-```
+### Webhook Error Handling
 
-#### 401 Unauthorized
+Webhook endpoints return appropriate status codes to signal retry behavior:
 
-```json
-{
-  "error": "Unauthorized",
-  "message": "Authentication required"
-}
-```
+| Status | Payment Gateway Behavior |
+|---|---|
+| 200 | Event processed successfully — no retry |
+| 400 | Invalid payload — no retry (bad request) |
+| 401 | Invalid signature — no retry (auth failure) |
+| 500 | Server error — gateway will retry |
 
-#### 403 Forbidden
+---
 
-```json
-{
-  "error": "Forbidden",
-  "message": "You do not have permission to perform this action"
-}
-```
+## Support
 
-#### 404 Not Found
+For API-related questions, integration support, or to report issues:
 
-```json
-{
-  "error": "Not found",
-  "message": "Product not found"
-}
-```
+- **Phone:** +233 55 162 1261
+- **Email:** smartmart304@gmail.com
 
-#### 500 Internal Server Error
-
-```json
-{
-  "error": "Internal server error",
-  "message": "An unexpected error occurred"
-}
-```
-
-### Edge Function Errors
-
-Edge functions return errors in the following format:
-
-```json
-{
-  "error": "Error message from exception"
-}
-```
-
-With appropriate HTTP status codes (400, 401, 405, 500).
+Our team can assist with API integration, webhook configuration, authentication setup, and troubleshooting.

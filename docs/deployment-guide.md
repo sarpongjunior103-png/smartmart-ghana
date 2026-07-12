@@ -1,556 +1,438 @@
-# SmartMart Ghana — Deployment Guide
+# Deployment Guide
 
-This guide covers the complete deployment process for the SmartMart Ghana platform, from prerequisites to post-deployment monitoring.
+This guide covers the complete deployment process for SmartMart, from local development to production.
 
 ---
 
 ## Table of Contents
 
-1. [Prerequisites](#1-prerequisites)
-2. [Environment Variables](#2-environment-variables)
-3. [Database Migrations](#3-database-migrations)
-4. [Edge Functions](#4-edge-functions)
-5. [Webhook URLs](#5-webhook-urls)
-6. [Cloudinary Setup](#6-cloudinary-setup)
-7. [Build & Deploy](#7-build--deploy)
-8. [Post-Deployment](#8-post-deployment)
-9. [Monitoring](#9-monitoring)
-10. [Backup & Recovery](#10-backup--recovery)
-11. [Troubleshooting](#11-troubleshooting)
+1. [Prerequisites](#prerequisites)
+2. [Environment Setup](#environment-setup)
+3. [Database Deployment (Supabase)](#database-deployment-supabase)
+4. [Edge Functions Deployment](#edge-functions-deployment)
+5. [Frontend Deployment (Vercel)](#frontend-deployment-vercel)
+6. [Payment Gateway Configuration](#payment-gateway-configuration)
+7. [Email Service Configuration](#email-service-configuration)
+8. [Cloudinary Configuration](#cloudinary-configuration)
+9. [CI/CD Pipeline](#cicd-pipeline)
+10. [Domain & DNS Setup](#domain--dns-setup)
+11. [Post-Deployment Checklist](#post-deployment-checklist)
+12. [Rollback Procedure](#rollback-procedure)
+13. [Monitoring & Alerts](#monitoring--alerts)
+14. [Troubleshooting](#troubleshooting)
+15. [Support](#support)
 
 ---
 
-## 1. Prerequisites
+## Prerequisites
 
-### Required Accounts & Tools
+Before deploying, ensure you have the following:
 
-- **Node.js** v18.x or higher
-- **npm** v9.x or higher
-- **Git** for version control
-- **Supabase** account with a project created
-- **Cloudinary** account for image storage
-- **Resend** account for transactional emails
-- **Payment Gateway accounts** (one or more):
-  - Paystack (Ghana)
-  - Stripe (international)
-  - Flutterwave (Africa)
-  - Hubtel (Ghana)
-
-### Local Development Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/smartmart-ghana.git
-cd smartmart-ghana
-
-# Install dependencies
-npm ci
-
-# Copy environment template
-cp .env.example .env.local
-
-# Start development server
-npm run dev
-```
+- **Node.js** 18.x or later
+- **npm** 9.x or later
+- **Git** installed and configured
+- A **Supabase** project (https://supabase.com)
+- A **Vercel** account (https://vercel.com)
+- A **Cloudinary** account (https://cloudinary.com)
+- A **Resend** account for email (https://resend.com)
+- Payment gateway accounts:
+  - **Paystack** (https://paystack.com)
+  - **Stripe** (https://stripe.com)
+  - **Flutterwave** (https://flutterwave.com)
+  - **Hubtel** (https://hubtel.com)
 
 ---
 
-## 2. Environment Variables
+## Environment Setup
 
-Create a `.env.local` file (development) or configure in your hosting platform (production) with the following variables:
+### Local Development
 
-### Supabase Configuration
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/your-org/smartmart.git
+   cd smartmart
+   ```
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-SUPABASE_ANON_KEY=your-anon-key
-```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-> ⚠️ **Security Warning**: Never expose `SUPABASE_SERVICE_ROLE_KEY` to the client. Only use it in server-side code and edge functions.
+3. Create a `.env.local` file:
+   ```bash
+   cp .env.example .env.local
+   ```
 
-### Payment Gateway Configuration
+4. Fill in the environment variables (see below).
 
-```env
-# Paystack
-PAYSTACK_SECRET_KEY=sk_test_or_live_your_key
-PAYSTACK_PUBLIC_KEY=pk_test_or_live_your_key
+### Environment Variables
 
-# Stripe
-STRIPE_SECRET_KEY=sk_test_or_live_your_key
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_or_live_your_key
-
-# Flutterwave
-FLUTTERWAVE_SECRET_KEY=FLWSECK-your_key
-FLUTTERWAVE_PUBLIC_KEY=FLWPUBK-your_key
-FLUTTERWAVE_ENCRYPTION_KEY=FLWSECK_TEST-your_key
-
-# Hubtel
-HUBTEL_CLIENT_ID=your_client_id
-HUBTEL_CLIENT_SECRET=your_client_secret
-```
-
-### Email Configuration (Resend)
-
-```env
-EMAIL_API_KEY=re_your_resend_api_key
-EMAIL_FROM=noreply@smartmartghana.com
-```
-
-### Cloudinary Configuration
-
-```env
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
-CLOUDINARY_API_KEY=your_api_key
-CLOUDINARY_API_SECRET=your_api_secret
-```
-
-### Application Configuration
-
-```env
-NEXT_PUBLIC_APP_URL=https://smartmartghana.com
-NEXT_PUBLIC_APP_NAME=SmartMart Ghana
-NODE_ENV=production
-```
+| Variable | Description | Example |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | `https://xxxxx.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key | `eyJhbGci...` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | `eyJhbGci...` |
+| `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | `smartmart` |
+| `NEXT_PUBLIC_CLOUDINARY_API_KEY` | Cloudinary API key | `123456789012345` |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret | `your-secret` |
+| `RESEND_API_KEY` | Resend API key | `re_xxxxxxxx` |
+| `EMAIL_FROM` | Sender email address | `smartmart304@gmail.com` |
+| `PAYSTACK_SECRET_KEY` | Paystack secret key | `sk_live_xxxxxxxx` |
+| `PAYSTACK_PUBLIC_KEY` | Paystack public key | `pk_live_xxxxxxxx` |
+| `STRIPE_SECRET_KEY` | Stripe secret key | `sk_live_xxxxxxxx` |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | `whsec_xxxxxxxx` |
+| `FLUTTERWAVE_SECRET_KEY` | Flutterwave secret key | `FLWSECK-xxxxxxxx` |
+| `FLUTTERWAVE_PUBLIC_KEY` | Flutterwave public key | `FLWPUBK-xxxxxxxx` |
+| `HUBTEL_CLIENT_ID` | Hubtel client ID | `your-client-id` |
+| `HUBTEL_CLIENT_SECRET` | Hubtel client secret | `your-client-secret` |
 
 ---
 
-## 3. Database Migrations
+## Database Deployment (Supabase)
 
-### Applying Migrations via Supabase Dashboard
+### 1. Create a Supabase Project
 
-1. Navigate to your Supabase project dashboard.
-2. Go to **SQL Editor**.
-3. Run migrations in order from the `supabase/migrations/` directory.
-4. Verify each migration completes successfully before proceeding to the next.
+1. Go to [supabase.com](https://supabase.com) and create a new project.
+2. Note your Project URL and API keys from **Settings → API**.
+3. Set the database password securely.
 
-### Migration Order
-
-The migrations should be applied in the following order:
-
-1. **Core tables**: profiles, categories, products, product_images
-2. **Order system**: orders, order_items, payments, transactions, shipping
-3. **Vendor system**: vendor_profiles, stores, inventory_logs
-4. **Engagement**: reviews, wishlist, chat_conversations, chat_messages
-5. **Loyalty & referrals**: loyalty_points, referrals
-6. **Admin**: activity_logs, platform_settings, support_tickets
-7. **Security**: RLS policies, triggers, functions
-
-### Applying via Supabase CLI
+### 2. Run Migrations
 
 ```bash
 # Install Supabase CLI
 npm install -g supabase
 
-# Link to your project
+# Link your project
 supabase link --project-ref your-project-ref
 
-# Push migrations
+# Run all migrations
 supabase db push
-
-# Or apply a specific migration
-supabase migration up
 ```
 
-### Verify Migrations
+### 3. Configure RLS Policies
+
+Row Level Security (RLS) policies are included in the migrations. Verify they are active:
 
 ```sql
--- Check all tables exist
-SELECT table_name FROM information_schema.tables
-WHERE table_schema = 'public'
-ORDER BY table_name;
-
--- Verify RLS is enabled
-SELECT tablename, rowsecurity FROM pg_tables
-WHERE schemaname = 'public' AND rowsecurity = true;
+SELECT tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public';
 ```
 
----
-
-## 4. Edge Functions
-
-### Deploying Edge Functions
-
-Edge functions are deployed via the Supabase dashboard or CLI.
-
-#### Via Supabase Dashboard
-
-1. Navigate to **Edge Functions** in your Supabase project.
-2. Click **Create Function** or select an existing function to update.
-3. Deploy each function from the `supabase/functions/` directory.
-
-#### Via Supabase CLI
+### 4. Seed Initial Data
 
 ```bash
-# Deploy all edge functions
-supabase functions deploy paystack-webhook --no-verify-jwt
-supabase functions deploy stripe-webhook --no-verify-jwt
-supabase functions deploy flutterwave-webhook --no-verify-jwt
-supabase functions deploy hubtel-webhook --no-verify-jwt
-supabase functions deploy send-email --no-verify-jwt
+supabase db seed
 ```
 
-### Edge Function Secrets
+This populates:
+- Default categories
+- Admin user
+- Default settings
+- Sample products (optional)
 
-Configure the following secrets for edge functions:
+---
+
+## Edge Functions Deployment
+
+SmartMart uses five Supabase Edge Functions:
+
+| Function | Purpose |
+|---|---|
+| `paystack-webhook` | Handles Paystack payment callbacks |
+| `stripe-webhook` | Handles Stripe payment callbacks |
+| `flutterwave-webhook` | Handles Flutterwave payment callbacks |
+| `hubtel-webhook` | Handles Hubtel payment callbacks |
+| `send-email` | Sends branded transactional emails via Resend |
+
+### Deploy All Functions
 
 ```bash
-# Set secrets via CLI
-supabase secrets set SUPABASE_URL=https://your-project.supabase.co
-supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Email secrets
-supabase secrets set EMAIL_API_KEY=re_your_resend_api_key
-supabase secrets set EMAIL_FROM=noreply@smartmartghana.com
-
-# Payment gateway secrets (for webhook verification)
-supabase secrets set PAYSTACK_SECRET_KEY=sk_live_your_key
-supabase secrets set STRIPE_WEBHOOK_SECRET=whsec_your_secret
-supabase secrets set FLUTTERWAVE_SECRET_KEY=FLWSECK_your_key
-supabase secrets set HUBTEL_CLIENT_SECRET=your_secret
+# Deploy each function
+supabase functions deploy paystack-webhook --project-ref your-project-ref
+supabase functions deploy stripe-webhook --project-ref your-project-ref
+supabase functions deploy flutterwave-webhook --project-ref your-project-ref
+supabase functions deploy hubtel-webhook --project-ref your-project-ref
+supabase functions deploy send-email --project-ref your-project-ref
 ```
 
-### Available Edge Functions
-
-| Function | Purpose | JWT Verification |
-|----------|---------|------------------|
-| `paystack-webhook` | Paystack payment webhook handler | Disabled |
-| `stripe-webhook` | Stripe payment webhook handler | Disabled |
-| `flutterwave-webhook` | Flutterwave payment webhook handler | Disabled |
-| `hubtel-webhook` | Hubtel payment webhook handler | Disabled |
-| `send-email` | Transactional email service (Resend) | Disabled |
-
----
-
-## 5. Webhook URLs
-
-After deploying edge functions, configure webhook URLs in each payment gateway's dashboard.
-
-### Paystack Webhook
-
-- **URL**: `https://your-project.supabase.co/functions/v1/paystack-webhook`
-- **Dashboard**: Paystack Dashboard → Settings → API Keys & Webhooks
-- **Events to subscribe**: `charge.success`, `charge.failed`, `refund.processed`
-
-### Stripe Webhook
-
-- **URL**: `https://your-project.supabase.co/functions/v1/stripe-webhook`
-- **Dashboard**: Stripe Dashboard → Developers → Webhooks
-- **Events to subscribe**: `checkout.session.completed`, `charge.refunded`, `checkout.session.expired`
-- **Signing secret**: Copy the webhook signing secret and set as `STRIPE_WEBHOOK_SECRET`
-
-### Flutterwave Webhook
-
-- **URL**: `https://your-project.supabase.co/functions/v1/flutterwave-webhook`
-- **Dashboard**: Flutterwave Dashboard → Settings → Webhooks
-- **Events to subscribe**: `charge.completed`, `refund.completed`
-
-### Hubtel Webhook
-
-- **URL**: `https://your-project.supabase.co/functions/v1/hubtel-webhook`
-- **Dashboard**: Hubtel Partner Dashboard → API → Webhooks
-- **Events**: Success and Failed transaction notifications
-
----
-
-## 6. Cloudinary Setup
-
-### Create a Cloudinary Account
-
-1. Sign up at [cloudinary.com](https://cloudinary.com).
-2. Copy your **Cloud Name**, **API Key**, and **API Secret** from the dashboard.
-3. Add them to your environment variables.
-
-### Upload Presets
-
-Configure upload presets for different image types:
-
-1. Go to **Settings → Upload** in Cloudinary dashboard.
-2. Create presets:
-   - `product_images`: Maximum 10MB, images only, auto-tag
-   - `vendor_logos`: Maximum 2MB, images only
-   - `user_avatars`: Maximum 2MB, images only
-   - `category_images`: Maximum 5MB, images only
-
-### Folder Structure
-
-Organize uploads into folders:
-- `products/` — Product images
-- `vendors/logos/` — Vendor store logos
-- `users/avatars/` — User profile pictures
-- `categories/` — Category images
-
-### Transformation Settings
-
-The application uses these Cloudinary transformations:
-- **Optimized**: `f_auto,q_auto,w_800` — For product detail pages
-- **Thumbnail**: `f_auto,q_auto,w_200,c_fill` — For product cards
-- **Full size**: `f_auto,q_auto,w_1200` — For zoomed product views
-- **Avatar**: `f_auto,q_auto,w_200,h_200,c_fill` — For user avatars
-
----
-
-## 7. Build & Deploy
-
-### Building the Application
+### Set Edge Function Secrets
 
 ```bash
-# Install dependencies
-npm ci
-
-# Run linting
-npm run lint
-
-# Run tests
-npm run test:unit
-npm run test:integration
-
-# Build for production
-npm run build
-
-# Start production server (if self-hosting)
-npm start
+supabase secrets set \
+  PAYSTACK_SECRET_KEY=sk_live_xxxxxxxx \
+  STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxx \
+  FLUTTERWAVE_SECRET_KEY=FLWSECK-xxxxxxxx \
+  FLUTTERWAVE_WEBHOOK_HASH=your-hash \
+  HUBTEL_CLIENT_ID=your-client-id \
+  HUBTEL_CLIENT_SECRET=your-client-secret \
+  HUBTEL_WEBHOOK_SECRET=your-webhook-secret \
+  RESEND_API_KEY=re_xxxxxxxx \
+  EMAIL_FROM=smartmart304@gmail.com \
+  --project-ref your-project-ref
 ```
 
-### Deploying to Vercel (Recommended)
+### Configure Webhook URLs
 
-1. Connect your GitHub repository to Vercel.
-2. Configure environment variables in Vercel project settings.
-3. Set build command: `npm run build`
-4. Set output directory: `.next`
-5. Deploy automatically on push to `main` branch.
+After deploying, set the webhook URLs in each payment gateway's dashboard:
 
-### Deploying to Other Platforms
-
-#### Netlify
-
-```bash
-npm install -g netlify-cli
-netlify deploy --build --prod
-```
-
-#### Self-Hosted (PM2)
-
-```bash
-npm ci
-npm run build
-pm2 start npm --name "smartmart" -- start
-pm2 save
-pm2 startup
-```
-
-### CI/CD Pipeline
-
-The GitHub Actions workflow (`.github/workflows/ci-cd.yml`) automatically:
-1. Runs ESLint and TypeScript checks
-2. Runs unit tests
-3. Runs integration tests
-4. Builds the application
-5. Runs security audit
-6. Deploys on push to `main` branch
+- **Paystack**: `https://your-project-ref.supabase.co/functions/v1/paystack-webhook`
+- **Stripe**: `https://your-project-ref.supabase.co/functions/v1/stripe-webhook`
+- **Flutterwave**: `https://your-project-ref.supabase.co/functions/v1/flutterwave-webhook`
+- **Hubtel**: `https://your-project-ref.supabase.co/functions/v1/hubtel-webhook`
 
 ---
 
-## 8. Post-Deployment
+## Frontend Deployment (Vercel)
 
-### Initial Setup Checklist
+### 1. Import the Project
 
-- [ ] Verify the homepage loads correctly
-- [ ] Test user registration and login
-- [ ] Create an admin user and verify admin access
-- [ ] Configure platform settings (general, payment, shipping, tax)
-- [ ] Test product creation as a vendor
-- [ ] Test the checkout flow end-to-end
-- [ ] Verify email sending (welcome, verification, order confirmation)
-- [ ] Test webhook endpoints with sandbox/trigger events
-- [ ] Verify Cloudinary image uploads
-- [ ] Check that RLS policies are enforcing access control
-- [ ] Test the AI search assistant
+1. Go to [vercel.com](https://vercel.com) and click **New Project**.
+2. Import your GitHub repository.
+3. Select **Next.js** as the framework preset.
 
-### Admin Account Setup
+### 2. Configure Environment Variables
 
-Create the first admin account via SQL:
+Add all `NEXT_PUBLIC_*` and server-side environment variables in the Vercel dashboard under **Settings → Environment Variables**.
 
-```sql
--- After signing up via the app, update the user's role
-UPDATE profiles
-SET role = 'admin'
-WHERE email = 'admin@smartmartghana.com';
-```
-
-### Seed Data
-
-Optionally seed initial data:
-
-```sql
--- Insert default categories
-INSERT INTO categories (name, slug, description) VALUES
-('Electronics', 'electronics', 'Electronic devices and accessories'),
-('Fashion', 'fashion', 'Clothing, shoes, and accessories'),
-('Home & Living', 'home-living', 'Home appliances and decor'),
-('Health & Beauty', 'health-beauty', 'Health and beauty products'),
-('Phones & Tablets', 'phones-tablets', 'Mobile phones and tablets');
-
--- Insert default platform settings
-INSERT INTO platform_settings (category, key, value) VALUES
-('general', 'site_name', 'SmartMart Ghana'),
-('general', 'support_email', 'support@smartmartghana.com'),
-('payment', 'default_currency', 'GHS'),
-('shipping', 'default_carrier', 'Ghana Post');
-```
-
----
-
-## 9. Monitoring
-
-### Application Monitoring
-
-- **Vercel Analytics**: Monitor page load times and Core Web Vitals
-- **Supabase Dashboard**: Monitor database performance, auth, and edge function logs
-- **Cloudinary Dashboard**: Monitor image upload bandwidth and storage usage
-
-### Health Check Endpoint
-
-The application exposes a health check endpoint:
-
-```
-GET /api/health
-```
-
-Response:
-```json
-{
-  "status": "healthy",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "service": "smartmart-ghana",
-  "version": "1.0.0",
-  "database": {
-    "status": "connected"
-  }
-}
-```
-
-Set up uptime monitoring (e.g., UptimeRobot, Pingdom) to check this endpoint.
-
-### Edge Function Logs
-
-Monitor edge function logs in the Supabase dashboard:
-1. Go to **Edge Functions** → select function → **Logs**
-2. Check for errors in webhook processing
-3. Monitor email sending failures
-
-### Database Monitoring
-
-Monitor in Supabase dashboard:
-- **Database → Reports**: Query performance, connection usage
-- **Auth → Users**: User growth, active sessions
-- **Storage**: File storage usage
-
----
-
-## 10. Backup & Recovery
-
-### Database Backups
-
-Supabase provides automatic daily backups for Pro plans and above.
-
-#### Manual Backup
+### 3. Deploy
 
 ```bash
-# Using pg_dump
-pg_dump "postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres" \
-  -F c -f backup_$(date +%Y%m%d).dump
-
-# Using Supabase CLI
-supabase db dump -f backup.sql
+# Using Vercel CLI
+npm install -g vercel
+vercel --prod
 ```
 
-#### Restore from Backup
+Or push to the `main` branch — the CI/CD pipeline will deploy automatically.
 
-```bash
-# Using pg_restore
-pg_restore -d "postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres" \
-  backup_20240115.dump
-```
+### 4. Custom Domain
 
-### Backup Schedule
-
-- **Automatic**: Daily (Supabase Pro plan)
-- **Manual**: Before major deployments or schema changes
-- **Retention**: Keep at least 7 days of backups
-
-### Cloudinary Backups
-
-Cloudinary automatically stores all uploaded assets. No additional backup is needed for images.
+1. In Vercel, go to **Settings → Domains**.
+2. Add your custom domain (e.g., `smartmart.com`).
+3. Configure DNS records as instructed by Vercel.
+4. Wait for SSL certificate provisioning.
 
 ---
 
-## 11. Troubleshooting
+## Payment Gateway Configuration
+
+### Paystack
+
+1. Log in to your [Paystack dashboard](https://dashboard.paystack.com).
+2. Go to **Settings → API Keys** to get your public and secret keys.
+3. Go to **Settings → Webhooks** and add the webhook URL.
+4. Set the webhook secret for signature verification.
+
+### Stripe
+
+1. Log in to your [Stripe dashboard](https://dashboard.stripe.com).
+2. Go to **Developers → API Keys** to get your keys.
+3. Go to **Developers → Webhooks** and add an endpoint for:
+   - `checkout.session.completed`
+   - `charge.refunded`
+   - `checkout.session.expired`
+4. Copy the signing secret for `STRIPE_WEBHOOK_SECRET`.
+
+### Flutterwave
+
+1. Log in to your [Flutterwave dashboard](https://dashboard.flutterwave.com).
+2. Go to **Settings → API Keys** to get your keys.
+3. Set the webhook URL and hash in **Settings → Webhooks**.
+
+### Hubtel
+
+1. Log in to your [Hubtel dashboard](https://console.hubtel.com).
+2. Go to **Settings → API** to get your client ID and secret.
+3. Configure the webhook URL for payment notifications.
+
+---
+
+## Email Service Configuration
+
+SmartMart uses [Resend](https://resend.com) for transactional emails.
+
+1. Create a Resend account and get your API key.
+2. Set `RESEND_API_KEY` in your Supabase Edge Function secrets.
+3. Set `EMAIL_FROM` to `smartmart304@gmail.com`.
+4. Verify your sending domain in Resend (if using a custom domain).
+
+### Email Templates
+
+The `send-email` edge function supports 9 branded templates:
+
+| Template | Trigger |
+|---|---|
+| `welcome` | New user registration |
+| `email_verification` | Email verification required |
+| `password_reset` | Password reset requested |
+| `order_confirmation` | Order placed and confirmed |
+| `order_shipped` | Order dispatched |
+| `order_delivered` | Order delivered |
+| `refund_notification` | Refund processed |
+| `vendor_approval` | Vendor application approved |
+| `vendor_rejection` | Vendor application rejected |
+
+All emails include the SmartMart contact information in the footer:
+- **Phone:** +233 55 162 1261
+- **Email:** smartmart304@gmail.com
+
+---
+
+## Cloudinary Configuration
+
+1. Create a [Cloudinary](https://cloudinary.com) account.
+2. Copy your cloud name, API key, and API secret from the dashboard.
+3. Set the environment variables:
+   - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
+   - `NEXT_PUBLIC_CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
+4. Configure upload presets for product images, avatars, and store logos.
+
+---
+
+## CI/CD Pipeline
+
+The GitHub Actions workflow (`.github/workflows/ci-cd.yml`) runs the following jobs:
+
+| Job | Description |
+|---|---|
+| `lint` | ESLint + Prettier check |
+| `unit-tests` | Jest unit tests |
+| `integration-tests` | Integration tests with Supabase |
+| `build` | Next.js production build |
+| `security-audit` | npm audit + CodeQL analysis |
+| `deploy` | Deploy to Vercel + Supabase Edge Functions (main branch only) |
+
+### Required GitHub Secrets
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `VERCEL_TOKEN`
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
+- `SUPABASE_PROJECT_REF`
+- `SUPABASE_ACCESS_TOKEN`
+- All payment gateway keys
+
+---
+
+## Domain & DNS Setup
+
+### DNS Records
+
+| Type | Name | Value |
+|---|---|---|
+| A | `@` | Vercel IP (provided) |
+| CNAME | `www` | `cname.vercel-dns.com` |
+| MX | `@` | Your email provider's MX records |
+| TXT | `@` | SPF, DKIM, DMARC records |
+
+### SSL Certificate
+
+Vercel automatically provisions SSL certificates for custom domains. No additional configuration is needed.
+
+---
+
+## Post-Deployment Checklist
+
+- [ ] Database migrations applied successfully
+- [ ] RLS policies enabled on all tables
+- [ ] Edge functions deployed and secrets configured
+- [ ] Webhook URLs set in all payment gateways
+- [ ] Test webhook received from each payment gateway
+- [ ] Frontend deployed to Vercel
+- [ ] Custom domain configured and SSL active
+- [ ] Environment variables set in Vercel
+- [ ] Cloudinary upload presets configured
+- [ ] Resend sending domain verified
+- [ ] Test email sent and received
+- [ ] Test order placed end-to-end
+- [ ] Test payment processed via each gateway
+- [ ] Test refund processed
+- [ ] Admin dashboard accessible
+- [ ] Vendor registration flow tested
+- [ ] Customer registration flow tested
+- [ ] Search and spell correction working
+- [ ] Live chat functional
+- [ ] CI/CD pipeline passing on main branch
+
+---
+
+## Rollback Procedure
+
+### Frontend Rollback
+
+1. In Vercel, go to **Deployments**.
+2. Find the last stable deployment.
+3. Click the **⋯** menu and select **Promote to Production**.
+
+### Database Rollback
+
+```bash
+# Roll back to a previous migration
+supabase db reset --to migration_name
+```
+
+### Edge Function Rollback
+
+```bash
+# Redeploy the previous version of a function
+supabase functions deploy function-name --project-ref your-project-ref
+```
+
+---
+
+## Monitoring & Alerts
+
+### Supabase Monitoring
+
+- Go to **Supabase Dashboard → Logs** to view database and function logs.
+- Set up alerts for error rates and latency.
+
+### Vercel Monitoring
+
+- Go to **Vercel Dashboard → Analytics** to view web vitals and traffic.
+- Configure Slack/Email notifications for deployment failures.
+
+### Payment Monitoring
+
+- Monitor webhook delivery in each payment gateway's dashboard.
+- Check the `activity_logs` table for payment events.
+- Set up alerts for failed payments.
+
+---
+
+## Troubleshooting
 
 ### Common Issues
 
-#### Edge Functions Not Receiving Webhooks
+**Edge function returns 401 on webhook**
+- Verify the webhook secret is set correctly in Supabase secrets.
+- Check that the payment gateway is sending the correct signature header.
 
-1. Verify the webhook URL is correctly set in the payment gateway dashboard.
-2. Check that the edge function is deployed and active.
-3. Verify JWT verification is disabled for webhook functions.
-4. Check edge function logs for errors.
+**Emails not sending**
+- Verify `RESEND_API_KEY` is set in Edge Function secrets.
+- Check that `EMAIL_FROM` is set to `smartmart304@gmail.com`.
+- Review the Resend dashboard for delivery failures.
 
-#### Emails Not Sending
+**Database connection errors**
+- Verify `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are correct.
+- Check that RLS policies are not blocking access.
+- Ensure the service role key is only used server-side.
 
-1. Verify `EMAIL_API_KEY` and `EMAIL_FROM` secrets are set.
-2. Check Resend dashboard for sending errors.
-3. Verify the recipient email is valid.
-4. Check edge function logs for the `send-email` function.
+**Payment not confirmed**
+- Check the webhook URL is reachable (no firewall blocking).
+- Verify the signature verification logic.
+- Check the `payments` and `activity_logs` tables for the transaction.
 
-#### Database Connection Errors
+---
 
-1. Verify `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are correct.
-2. Check Supabase project status (not paused).
-3. Verify connection pool limits are not exceeded.
-4. Check network/firewall settings.
+## Support
 
-#### RLS Policy Blocking Access
+If you encounter issues during deployment, please contact our support team:
 
-1. Verify the user is authenticated.
-2. Check the RLS policy logic in the Supabase dashboard.
-3. Test with the service role key to confirm data exists.
-4. Review the policy conditions (e.g., `auth.uid() = user_id`).
+- **Phone:** +233 55 162 1261
+- **Email:** smartmart304@gmail.com
 
-#### Payment Webhook Signature Verification Fails
-
-1. **Paystack**: Verify `x-paystack-signature` header is present.
-2. **Stripe**: Verify `STRIPE_WEBHOOK_SECRET` matches the signing secret from the Stripe dashboard.
-3. **Flutterwave**: Verify the secret hash configured in Flutterwave dashboard.
-4. **Hubtel**: Verify the API credentials are correct.
-
-#### Cloudinary Upload Fails
-
-1. Verify `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` are correct.
-2. Check the upload preset configuration.
-3. Verify file size limits are not exceeded.
-4. Check Cloudinary plan limits (monthly bandwidth, storage).
-
-#### Build Fails
-
-1. Run `npm run lint` to check for linting errors.
-2. Run `npx tsc --noEmit` to check for TypeScript errors.
-3. Clear cache: `rm -rf .next node_modules && npm ci`
-4. Check for environment variable issues during build.
-
-#### Migration Errors
-
-1. Check for syntax errors in the SQL migration file.
-2. Verify foreign key references exist before creating dependent tables.
-3. Check for naming conflicts with existing tables/columns.
-4. Review the Supabase SQL editor for detailed error messages.
-
-### Getting Support
-
-- **Supabase Docs**: [supabase.com/docs](https://supabase.com/docs)
-- **Cloudinary Docs**: [cloudinary.com/documentation](https://cloudinary.com/documentation)
-- **Resend Docs**: [resend.com/docs](https://resend.com/docs)
-- **Internal Support**: support@smartmartghana.com
+Our team is available to assist with deployment, configuration, and troubleshooting.

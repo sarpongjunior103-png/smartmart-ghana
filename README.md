@@ -1,6 +1,6 @@
-# SmartMart Ghana
+# SmartMart
 
-Ghana's smartest e-commerce marketplace — connecting customers with verified vendors across the country. Built with Next.js, Supabase, and multi-gateway payment support.
+A full-featured multi-vendor e-commerce marketplace built with Next.js, Supabase, and Cloudinary. SmartMart supports multiple payment gateways, vendor stores, live chat, loyalty programs, referrals, and more.
 
 ---
 
@@ -15,24 +15,25 @@ Ghana's smartest e-commerce marketplace — connecting customers with verified v
 - [Testing](#testing)
 - [CI/CD](#cicd)
 - [License](#license)
+- [Contact](#contact)
 
 ---
 
 ## Tech Stack
 
-| Category | Technology |
-|----------|-----------|
-| **Frontend** | Next.js 14 (App Router), React 18, TypeScript |
-| **Styling** | Tailwind CSS, Radix UI components |
-| **Backend** | Supabase (PostgreSQL, Auth, Edge Functions, Storage) |
-| **Database** | PostgreSQL (via Supabase) with Row Level Security |
-| **Image Storage** | Cloudinary (CDN, optimization, transformations) |
-| **Email Service** | Resend (transactional emails with HTML templates) |
-| **Payments** | Paystack, Stripe, Flutterwave, Hubtel |
-| **Search** | Custom spell-correction search API |
-| **Testing** | Jest, React Testing Library |
-| **CI/CD** | GitHub Actions |
-| **Deployment** | Vercel (recommended) / Netlify / self-hosted |
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14 (App Router), React 18, TypeScript |
+| Styling | Tailwind CSS |
+| Database | Supabase (PostgreSQL) |
+| Authentication | Supabase Auth |
+| Edge Functions | Supabase Edge Functions (Deno) |
+| File Storage | Cloudinary |
+| Email Service | Resend |
+| Payments | Paystack, Stripe, Flutterwave, Hubtel |
+| Deployment | Vercel (frontend), Supabase (database + functions) |
+| CI/CD | GitHub Actions |
+| Testing | Jest |
 
 ---
 
@@ -40,99 +41,78 @@ Ghana's smartest e-commerce marketplace — connecting customers with verified v
 
 ### Prerequisites
 
-- Node.js v18.x or higher
-- npm v9.x or higher
+- Node.js 18+
+- npm 9+
 - A Supabase project
 - A Cloudinary account
 - A Resend account
-- Payment gateway account(s) (Paystack, Stripe, Flutterwave, and/or Hubtel)
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/smartmart-ghana.git
-cd smartmart-ghana
+git clone https://github.com/your-org/smartmart.git
+cd smartmart
 
 # Install dependencies
-npm ci
+npm install
 
-# Copy environment template
+# Copy environment variables
 cp .env.example .env.local
 
-# Configure environment variables (see .env.example for all required vars)
-# Edit .env.local with your Supabase, Cloudinary, Resend, and payment gateway keys
+# Fill in your environment variables in .env.local
+# (See the Environment Setup section in the deployment guide)
 
-# Start development server
+# Run database migrations
+npx supabase db push
+
+# Start the development server
 npm run dev
 ```
 
-The application will be available at `http://localhost:3000`.
-
-### Environment Variables
-
-See [`.env.example`](.env.example) for all required environment variables. Key variables include:
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Cloudinary
-NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=your-api-key
-CLOUDINARY_API_SECRET=your-api-secret
-
-# Email (Resend)
-EMAIL_API_KEY=re_your_resend_api_key
-EMAIL_FROM=noreply@smartmartghana.com
-
-# Payment Gateways
-PAYSTACK_SECRET_KEY=sk_test_or_live_your_key
-STRIPE_SECRET_KEY=sk_test_or_live_your_key
-STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret
-FLUTTERWAVE_SECRET_KEY=FLWSECK-your_key
-HUBTEL_CLIENT_ID=your_client_id
-HUBTEL_CLIENT_SECRET=your_client_secret
-
-# Application
-NEXT_PUBLIC_APP_URL=https://smartmartghana.com
-NEXT_PUBLIC_APP_NAME=SmartMart Ghana
-```
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
 ---
 
 ## Project Structure
 
 ```
-smartmart-ghana/
-├── app/                          # Next.js App Router pages and API routes
+smartmart/
+├── app/                          # Next.js App Router pages
+│   ├── admin/
+│   │   └── settings/
+│   │       └── page.tsx          # Admin settings (6 tabs)
 │   ├── api/
-│   │   ├── health/               # Health check endpoint
-│   │   └── search/               # Search API with spell correction
-│   ├── (shop)/                   # Customer-facing shop pages
-│   ├── admin/                    # Admin dashboard
-│   ├── vendor/                   # Vendor dashboard
-│   └── ...
-├── lib/                          # Shared libraries and utilities
-│   ├── supabase/                 # Supabase client configuration
-│   ├── cloudinary/               # Cloudinary URL helpers and config
-│   ├── seo/                      # SEO structured data generators
-│   └── ...
-├── components/                   # Reusable React components
+│   │   └── health/
+│   │       └── route.ts          # Health check endpoint
+│   ├── layout.tsx                # Root layout
+│   └── page.tsx                  # Home page
+├── lib/                          # Shared libraries
+│   ├── contact.ts                # Contact info constants
+│   ├── cloudinary.ts             # Cloudinary URL helpers
+│   ├── search/
+│   │   └── spell-correct.ts      # Spell correction logic
+│   └── seo/
+│       └── structured-data.ts   # SEO structured data schemas
 ├── supabase/
-│   ├── functions/                # Supabase Edge Functions
-│   │   ├── paystack-webhook/     # Paystack payment webhook
-│   │   ├── stripe-webhook/       # Stripe payment webhook
-│   │   ├── flutterwave-webhook/  # Flutterwave payment webhook
-│   │   ├── hubtel-webhook/       # Hubtel payment webhook
-│   │   └── send-email/           # Transactional email service
-│   └── migrations/               # Database migration SQL files
+│   ├── migrations/               # Database migrations
+│   └── functions/                # Edge Functions
+│       ├── paystack-webhook/     # Paystack payment webhook
+│       ├── stripe-webhook/       # Stripe payment webhook
+│       ├── flutterwave-webhook/  # Flutterwave payment webhook
+│       ├── hubtel-webhook/       # Hubtel payment webhook
+│       └── send-email/           # Email service (9 templates)
 ├── tests/
-│   ├── unit/                     # Unit tests (Jest)
-│   └── integration/              # Integration tests (Jest + Supabase)
+│   ├── unit/                     # Unit tests
+│   │   ├── search.test.ts
+│   │   ├── seo.test.ts
+│   │   ├── cloudinary.test.ts
+│   │   └── health.test.ts
+│   └── integration/              # Integration tests
+│       ├── auth.test.ts
+│       ├── database.test.ts
+│       ├── checkout.test.ts
+│       └── admin-vendor.test.ts
 ├── docs/                         # Documentation
 │   ├── deployment-guide.md
 │   ├── admin-guide.md
@@ -142,11 +122,7 @@ smartmart-ghana/
 │   └── launch-checklist.md
 ├── .github/
 │   └── workflows/
-│       └── ci-cd.yml             # GitHub Actions CI/CD pipeline
-├── public/                       # Static assets
-├── package.json
-├── tsconfig.json
-├── jest.config.js
+│       └── ci-cd.yml             # CI/CD pipeline
 └── README.md
 ```
 
@@ -154,105 +130,111 @@ smartmart-ghana/
 
 ## Database Schema Overview
 
-The platform uses PostgreSQL (via Supabase) with Row Level Security (RLS) on all tables. The schema is organized into the following groups:
+SmartMart uses Supabase (PostgreSQL) with the following core tables:
 
-### Core Tables
-- **`profiles`** — User accounts (customers, vendors, admins), linked to Supabase Auth
-- **`categories`** — Hierarchical product categories
-- **`products`** — Product listings from vendors
-- **`product_images`** — Product images (stored in Cloudinary)
+### User & Auth
+- **`profiles`** — User profiles (customers, vendors, admins) with roles
+- **`addresses`** — Saved shipping addresses
 
-### Order System
+### Catalog
+- **`categories`** — Product categories
+- **`products`** — Product listings with vendor association
+- **`product_images`** — Images for each product
+
+### Orders & Payments
 - **`orders`** — Customer orders with status tracking
-- **`order_items`** — Individual items within an order
-- **`payments`** — Payment records linked to payment gateways
-- **`transactions`** — Financial transaction ledger
-- **`shipping`** — Shipping and delivery tracking
+- **`order_items`** — Individual items within orders
+- **`payments`** — Payment records with gateway and status
+- **`transactions`** — Transaction log (payments, refunds)
 
-### Vendor System
-- **`vendor_profiles`** — Vendor-specific data (commission, payout balance)
-- **`stores`** — Vendor store pages
-- **`inventory_logs`** — Stock change audit trail
+### Cart & Wishlist
+- **`carts`** — Shopping carts
+- **`cart_items`** — Items in shopping carts
+- **`wishlists`** — User wishlists
+
+### Vendor
+- **`vendor_profiles`** — Vendor business profiles
+- **`stores`** — Vendor storefronts
+- **`inventory_logs`** — Inventory change history
 
 ### Engagement
 - **`reviews`** — Product reviews and ratings
-- **`wishlist`** — Saved products by users
-- **`chat_conversations`** — Customer-vendor chat sessions
-- **`chat_messages`** — Individual chat messages
-
-### Loyalty & Referrals
 - **`loyalty_points`** — Loyalty point transactions
-- **`referrals`** — Referral tracking and rewards
-
-### Admin
-- **`activity_logs`** — Audit log for all platform actions
-- **`platform_settings`** — Platform configuration (key-value by category)
+- **`referrals** — User referral records
+- **`chat_conversations`** — Live chat conversations
+- **`chat_messages`** — Individual chat messages
 - **`support_tickets`** — Customer support tickets
 
-For full table schemas, column descriptions, and RLS policies, see the [API Reference](docs/api-reference.md).
+### System
+- **`activity_logs`** — Audit log of all system actions
+- **`settings`** — Application settings (key-value store)
+
+All tables have **Row Level Security (RLS)** enabled with policies ensuring:
+- Users can only access their own data
+- Vendors can only manage their own products and orders
+- Admins have full access
+- Public read access for active products and categories
 
 ---
 
 ## Features
 
 ### Customer Features
-- 🛍️ **Product Browsing** — Browse by category, search, filter, and sort
-- 🔍 **AI Search Assistant** — Natural language search with spell correction
-- 🛒 **Cart & Checkout** — Multi-item cart with secure checkout
-- 💳 **Multiple Payment Options** — Mobile Money (MTN, Vodafone, AirtelTigo), card, bank transfer
-- 📦 **Order Tracking** — Real-time order status and shipping tracking
-- ❤️ **Wishlist** — Save products for later
-- ⭐ **Reviews** — Rate and review purchased products
-- 🏆 **Loyalty Program** — Earn points on purchases, tiered benefits
-- 👥 **Referral Program** — Invite friends and earn rewards
-- 💬 **Live Chat** — Chat directly with vendors
-- 🌍 **Multi-Country & Multi-Language** — Ghana, Nigeria, Côte d'Ivoire, Kenya, South Africa; English, Twi, Hausa, French
-- 👤 **Customer Dashboard** — Orders, wishlist, messages, loyalty, referrals
+- 🔐 Email/password authentication with email verification
+- 🔍 Product search with spell correction
+- 🛒 Shopping cart and secure checkout
+- 💳 Multiple payment options (Paystack, Stripe, Flutterwave, Hubtel)
+- 📦 Order tracking with shipping notifications
+- ❤️ Wishlist and saved items
+- ⭐ Product reviews and ratings
+- 🎁 Loyalty points program with tiers (Bronze → Platinum)
+- 🤝 Referral program with rewards
+- 💬 Live chat with vendors
+- 📊 Account dashboard with order history
 
 ### Vendor Features
-- 🏪 **Store Setup** — Custom store page with logo, banner, and description
-- 📦 **Product Management** — Add, edit, and manage product listings
-- 📊 **Inventory Tracking** — Stock management with audit logs
-- 📋 **Order Fulfillment** — Process, ship, and track orders
-- 💰 **Earnings & Payouts** — Track earnings, request payouts via Mobile Money or bank
-- 💬 **Customer Communication** — Live chat with customers
-- 📈 **Vendor Analytics** — Sales, performance, and growth metrics
-- 🏷️ **Promotions** — Sale pricing and featured products
+- 🏪 Customizable storefront with logo and banner
+- 📦 Product management (add, edit, delete, bulk operations)
+- 📊 Inventory management with stock tracking and alerts
+- 🚚 Order fulfillment pipeline (confirmed → shipped → delivered)
+- 💰 Earnings tracking and payout management
+- 💬 Customer communication via live chat
+- 📈 Sales analytics and reports
 
 ### Admin Features
-- ⚙️ **Platform Settings** — General, payment, shipping, tax, notification, security
-- 👥 **User Management** — Manage customers, vendors, and admins
-- 📦 **Product Management** — Oversee and moderate all products
-- 📋 **Order Management** — View and manage all platform orders
-- 📊 **Analytics & Reporting** — Revenue, sales, customer, and vendor analytics
-- 📝 **Audit Logs** — Complete activity log for compliance
-- 🎫 **Support Tickets** — Manage customer support tickets
-- ✅ **Vendor Approval** — Review and approve vendor applications
+- 📊 Dashboard with key metrics and recent activity
+- ⚙️ Settings management with 6 tabs (general, payment, shipping, tax, notification, security)
+- 👥 User management (view, suspend, change roles)
+- 📦 Product moderation and approval
+- 📋 Order management and dispute resolution
+- 🏪 Vendor approval and store management
+- 📊 Analytics and reporting
+- 📝 Audit logs for all system actions
+- 🎫 Support ticket management
+- 🔒 Security controls (2FA, IP whitelist, maintenance mode)
 
-### Security Features
-- 🔒 **Row Level Security** — Database-level access control on all tables
-- 🔐 **Authentication** — Email/password, social login (Google, Facebook)
-- 🛡️ **Two-Factor Authentication** — Available for admin accounts
-- 🔍 **Input Validation** — Server-side validation on all inputs
-- 🚦 **Rate Limiting** — API rate limits to prevent abuse
-- 📜 **Audit Trail** — All admin and system actions logged
-- 🔑 **Secure Secrets** — Service role keys never exposed to client
-- 💳 **PCI Compliance** — Payment data handled by certified gateways
+### Technical Features
+- 🌐 SEO optimized with structured data (Schema.org)
+- 📱 Responsive design (mobile, tablet, desktop)
+- ⚡ Image optimization via Cloudinary
+- 📧 9 branded email templates via Resend
+- 🔗 4 payment gateway integrations with webhook handling
+- 🛡️ Row Level Security on all database tables
+- 🚀 CI/CD pipeline with automated testing and deployment
+- 📊 Health check endpoint for monitoring
 
 ---
 
 ## Documentation
 
-Comprehensive documentation is available in the `docs/` directory:
-
 | Document | Description |
-|----------|-------------|
-| [Deployment Guide](docs/deployment-guide.md) | Complete deployment instructions from prerequisites to monitoring |
-| [Admin Guide](docs/admin-guide.md) | Guide for platform administrators |
-| [Vendor Guide](docs/vendor-guide.md) | Guide for vendors setting up and managing their store |
-| [Customer Guide](docs/customer-guide.md) | Guide for customers using the platform |
-| [API Reference](docs/api-reference.md) | Full API documentation, database schema, and RLS policies |
-| [Launch Checklist](docs/launch-checklist.md) | Pre-launch and post-launch checklist |
+|---|---|
+| [Deployment Guide](docs/deployment-guide.md) | Complete deployment instructions |
+| [Admin Guide](docs/admin-guide.md) | Admin panel usage and management |
+| [Vendor Guide](docs/vendor-guide.md) | Vendor registration and store management |
+| [Customer Guide](docs/customer-guide.md) | Customer shopping and account guide |
+| [API Reference](docs/api-reference.md) | API endpoints, webhooks, and database schema |
+| [Launch Checklist](docs/launch-checklist.md) | Pre-launch validation checklist (15 sections) |
 
 ---
 
@@ -261,88 +243,75 @@ Comprehensive documentation is available in the `docs/` directory:
 ### Running Tests
 
 ```bash
-# Run unit tests
+# Run all unit tests
 npm run test:unit
 
-# Run integration tests (requires Supabase environment variables)
+# Run all integration tests
 npm run test:integration
 
 # Run all tests
 npm test
 
 # Run tests with coverage
-npm run test:unit -- --coverage
+npm run test:coverage
 
 # Run tests in watch mode
-npm run test:unit -- --watch
+npm run test:watch
 ```
 
 ### Test Structure
 
-```
-tests/
-├── unit/                         # Unit tests (no external dependencies)
-│   ├── search.test.ts            # Spell correction function tests
-│   ├── seo.test.ts               # SEO structured data tests
-│   ├── cloudinary.test.ts        # Cloudinary URL helper tests
-│   └── health.test.ts            # Health check API tests
-└── integration/                  # Integration tests (requires Supabase)
-    ├── auth.test.ts              # Supabase auth integration tests
-    ├── database.test.ts          # Database connectivity tests
-    ├── checkout.test.ts          # Payment, order, shipping, transaction tests
-    └── admin-vendor.test.ts      # Vendor, store, activity, inventory, loyalty, referral, chat tests
-```
+| Directory | Description |
+|---|---|
+| `tests/unit/` | Unit tests for individual functions and components |
+| `tests/integration/` | Integration tests for database, auth, and API flows |
 
-### Test Categories
+### Unit Tests
 
-- **Unit Tests**: Test individual functions and components in isolation. Mock external dependencies.
-- **Integration Tests**: Test interactions with the Supabase database, auth, and edge functions. Require environment variables.
+| Test File | What it Tests |
+|---|---|
+| `search.test.ts` | Spell correction (e.g., "fone" → "phone", "laptob" → "laptop") |
+| `seo.test.ts` | Structured data schemas (Website, Organization, Product, Breadcrumb) |
+| `cloudinary.test.ts` | Image URL generation (optimized, thumbnail, full-size, avatar) |
+| `health.test.ts` | Health check API endpoint |
 
-### Environment Variables for Testing
+### Integration Tests
 
-Integration tests require the following environment variables:
-
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
+| Test File | What it Tests |
+|---|---|
+| `auth.test.ts` | Supabase authentication (sign up, sign in, session, RLS) |
+| `database.test.ts` | Database connectivity and table access |
+| `checkout.test.ts` | Payments, orders, shipping, transactions |
+| `admin-vendor.test.ts` | Vendor profiles, stores, activity logs, inventory logs, loyalty points, referrals, chat |
 
 ---
 
 ## CI/CD
 
-The project uses GitHub Actions for continuous integration and deployment. The pipeline is defined in [`.github/workflows/ci-cd.yml`](.github/workflows/ci-cd.yml).
+The GitHub Actions pipeline (`.github/workflows/ci-cd.yml`) runs on every push and pull request to `main` and `develop` branches.
 
-### Pipeline Stages
+### Pipeline Jobs
 
-| Stage | Description | Dependencies |
-|-------|-------------|-------------|
-| **Lint** | ESLint + TypeScript type checking | — |
-| **Unit Tests** | Jest unit tests with coverage | — |
-| **Integration Tests** | Jest integration tests with Supabase | Lint + Unit Tests |
-| **Build** | Next.js production build | Lint + Unit Tests |
-| **Security Audit** | npm audit for vulnerabilities | — |
-| **Deploy** | Deploy to production | Build + Integration + Security Audit |
+| Job | Description | Trigger |
+|---|---|---|
+| `lint` | ESLint + Prettier check | All pushes/PRs |
+| `unit-tests` | Jest unit tests | After lint |
+| `integration-tests` | Integration tests with Supabase | After unit tests |
+| `build` | Next.js production build | After integration tests |
+| `security-audit` | npm audit + CodeQL analysis | After build |
+| `deploy` | Deploy to Vercel + Supabase Edge Functions | `main` branch only |
 
-### Branch Strategy
+### Required Secrets
 
-- **`main`** — Production branch. Pushes trigger full pipeline + deployment.
-- **`develop`** — Development branch. Pushes trigger CI pipeline (no deployment).
-- **Pull Requests** — All PRs to `main` trigger the full CI pipeline.
+Configure the following secrets in your GitHub repository settings:
 
-### Setup
-
-1. Configure the following secrets in your GitHub repository settings:
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY`
-   - `SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   - `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`
-   - `DEPLOY_TOKEN`
-
-2. Ensure branch protection rules require status checks before merging.
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+- `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`
+- Payment gateway keys (Paystack, Stripe, Flutterwave, Hubtel)
+- `RESEND_API_KEY`
 
 ---
 
@@ -354,10 +323,9 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Contact
 
-- **Website**: [https://smartmartghana.com](https://smartmartghana.com)
-- **Support Email**: support@smartmartghana.com
-- **Support Phone**: +233 30 000 0000
+For questions, support, or inquiries about SmartMart:
 
----
+- **Phone:** +233 55 162 1261
+- **Email:** smartmart304@gmail.com
 
-<p align="center">Built with ❤️ for Ghana 🇬🇭</p>
+We're committed to providing a secure, reliable, and user-friendly marketplace experience. Don't hesitate to reach out!

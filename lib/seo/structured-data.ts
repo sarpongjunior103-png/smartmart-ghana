@@ -30,7 +30,8 @@ export function getOrganizationSchema() {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
-      email: 'support@smartmartghana.com',
+      email: 'smartmart304@gmail.com',
+      telephone: '+233551621261',
       availableLanguage: ['English', 'French', 'Swahili', 'Arabic', 'Portuguese'],
     },
   };

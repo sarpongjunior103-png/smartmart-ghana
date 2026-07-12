@@ -1,425 +1,402 @@
-# SmartMart Ghana — Admin Guide
+# Admin Guide
 
-This guide provides comprehensive instructions for platform administrators to manage the SmartMart Ghana marketplace.
+This guide covers everything administrators need to manage SmartMart — from the dashboard to user management, product oversight, order fulfillment, analytics, and security.
 
 ---
 
 ## Table of Contents
 
-1. [Accessing the Admin Dashboard](#1-accessing-the-admin-dashboard)
-2. [Platform Settings](#2-platform-settings)
-3. [User Management](#3-user-management)
-4. [Product Management](#4-product-management)
-5. [Order Management](#5-order-management)
-6. [Analytics & Reporting](#6-analytics--reporting)
-7. [Audit Logs](#7-audit-logs)
-8. [Support Tickets](#8-support-tickets)
+1. [Accessing the Admin Panel](#accessing-the-admin-panel)
+2. [Dashboard Overview](#dashboard-overview)
+3. [Settings Management](#settings-management)
+4. [User Management](#user-management)
+5. [Product Management](#product-management)
+6. [Order Management](#order-management)
+7. [Vendor Management](#vendor-management)
+8. [Analytics & Reports](#analytics--reports)
+9. [Audit Logs](#audit-logs)
+10. [Support Tickets](#support-tickets)
+11. [Security Best Practices](#security-best-practices)
+12. [Support](#support)
 
 ---
 
-## 1. Accessing the Admin Dashboard
+## Accessing the Admin Panel
 
-### Prerequisites
+1. Navigate to `https://smartmart.com/admin`.
+2. Sign in with your admin credentials.
+3. If Two-Factor Authentication (2FA) is enabled, enter the code from your authenticator app.
 
-- You must have an account with the `admin` role assigned.
-- Your account must be active and email-verified.
-
-### Logging In
-
-1. Navigate to `https://smartmartghana.com/admin/login`.
-2. Enter your admin email and password.
-3. Complete two-factor authentication if enabled.
-4. You will be redirected to the admin dashboard at `/admin`.
-
-### Admin Dashboard Overview
-
-The dashboard provides a high-level summary of:
-- Total revenue (today, this week, this month)
-- Number of orders (pending, processing, completed)
-- Active vendors and pending vendor applications
-- Total registered customers
-- Recent activity feed
-- Platform health indicators
+> **Note:** Only users with the `admin` role can access the admin panel. Assign the admin role in the Supabase dashboard or via the user management interface.
 
 ---
 
-## 2. Platform Settings
+## Dashboard Overview
 
-Access platform settings at **Admin → Settings**. Settings are organized into six tabs.
+The admin dashboard provides a high-level summary of your store's performance.
 
-### General Settings
+### Key Metrics
 
-Configure basic platform information:
+| Metric | Description |
+|---|---|
+| Total Revenue | Sum of all completed orders |
+| Order Count | Total number of orders |
+| Active Users | Users who logged in within the last 30 days |
+| Total Products | Number of active products |
+| Pending Vendors | Vendor applications awaiting review |
+| Open Support Tickets | Unresolved customer support tickets |
 
-| Setting | Description | Example |
-|---------|-------------|---------|
-| Site Name | Platform display name | SmartMart Ghana |
-| Support Email | Customer support email | support@smartmartghana.com |
-| Support Phone | Customer support phone | +233 30 000 0000 |
-| Default Language | Platform default language | English |
-| Default Currency | Default transaction currency | GHS |
-| Timezone | Platform timezone | Africa/Accra |
-| Maintenance Mode | Toggle platform maintenance | Off |
+### Recent Activity
 
-### Payment Settings
+The dashboard shows the latest entries from the `activity_logs` table, including:
+- New orders
+- Payment events
+- Vendor registrations
+- System actions
 
-Configure payment gateway options:
+### Charts
 
-- **Enabled Gateways**: Toggle Paystack, Stripe, Flutterwave, Hubtel
-- **Default Gateway**: Set the primary payment method
-- **Mobile Money**: Enable MTN MoMo, Vodafone Cash, AirtelTigo Money
-- **Card Payments**: Enable/disable card payments
-- **Bank Transfer**: Enable bank transfer option
-- **Minimum Order Amount**: Minimum transaction amount
-- **Maximum Order Amount**: Maximum transaction amount
-- **Auto-confirm Payments**: Automatically confirm successful payments
+- **Revenue Over Time**: Daily/weekly/monthly revenue trends
+- **Top Products**: Best-selling products by quantity
+- **Top Categories**: Most popular product categories
+- **Order Status Breakdown**: Pending, confirmed, shipped, delivered, cancelled
 
-### Shipping Settings
+---
 
-Configure shipping and delivery:
+## Settings Management
 
-- **Default Carrier**: Ghana Post, DHL, FedEx, Aramex
-- **Free Shipping Threshold**: Minimum order amount for free shipping
-- **Standard Shipping Rate**: Flat rate for standard delivery
-- **Express Shipping Rate**: Flat rate for express delivery
-- **Delivery Zones**: Configure zones (Accra, Kumasi, Takoradi, Other)
-- **Zone-based Rates**: Custom rates per delivery zone
-- **Estimated Delivery Days**: Standard (3-5), Express (1-2)
-- **International Shipping**: Enable/disable international delivery
+The admin settings page has **6 tabs**:
 
-### Tax Settings
+### 1. General Settings
 
-Configure tax and VAT:
+| Setting | Description |
+|---|---|
+| Store Name | Public name displayed across the site |
+| Store Email | Primary contact email (`smartmart304@gmail.com`) |
+| Store Phone | Primary contact phone (`+233 55 162 1261`) |
+| Store Address | Physical store address |
+| Country | Operating country (affects currency and shipping) |
+| Currency | Default transaction currency |
+| Timezone | Used for timestamps and reports |
+| Store Logo | URL to the store logo image |
+| Store Description | SEO meta description |
 
-- **VAT Rate**: Ghana standard VAT rate (default: 15%)
-- **NHIL Rate**: National Health Insurance Levy (2.5%)
-- **GETFL Rate**: Ghana Education Trust Fund Levy (2.5%)
-- **Tax Inclusive**: Prices include tax (Yes/No)
-- **Tax-exempt Categories**: Categories exempt from tax
-- **Digital Products Tax**: Tax rate for digital goods
+### 2. Payment Settings
 
-### Notification Settings
+Toggle and configure each payment gateway:
 
-Configure platform notifications:
+- **Paystack**: Public key + secret key
+- **Stripe**: Public key + secret key
+- **Flutterwave**: Public key + secret key
+- **Hubtel**: Client ID + client secret
+- **Cash on Delivery**: Enable/disable
 
-- **Email Notifications**: Enable/disable transactional emails
-- **SMS Notifications**: Enable/disable SMS alerts
-- **New Order Alert**: Notify admin on new orders
-- **Vendor Application Alert**: Notify admin on new vendor applications
-- **Low Stock Alert**: Notify vendors when stock is low
-- **Refund Alert**: Notify admin on refund requests
-- **Support Ticket Alert**: Notify admin on new support tickets
-- **Daily Summary**: Daily email summary of platform activity
+### 3. Shipping Settings
 
-### Security Settings
+- **Free Shipping**: Enable and set minimum order threshold
+- **Flat Rate Shipping**: Standard shipping rate
+- **Local Pickup**: Enable and set pickup fee
+- **International Shipping**: Enable and set international rate
+- **Shipping Origin Address**: Where orders ship from
 
-Configure security policies:
+### 4. Tax Settings
 
-- **Two-Factor Authentication**: Require 2FA for admin accounts
-- **Password Policy**: Minimum length, complexity requirements
-- **Session Timeout**: Auto-logout after inactivity (minutes)
-- **Rate Limiting**: API request limits per user
+- **Enable Tax Collection**: Toggle automatic tax calculation
+- **Default Tax Rate (%)**: Percentage applied to all orders
+- **Tax Inclusive**: Whether prices include tax
+- **Tax by State/Region**: Location-based tax rates
+- **Default Tax Class**: Standard, reduced, zero, or exempt
+
+### 5. Notification Settings
+
+Toggle email, SMS, and push notifications:
+- Order confirmation emails
+- Order shipped emails
+- Order delivered emails
+- Refund notification emails
+- Vendor approval emails
+- Vendor rejection emails
+
+### 6. Security Settings
+
+- **Two-Factor Authentication**: Require 2FA for admin/vendor accounts
 - **IP Whitelist**: Restrict admin access to specific IPs
-- **Failed Login Limit**: Max failed attempts before lockout
-- **Account Verification**: Require email verification for new accounts
-- **Vendor Verification**: Require document upload for vendor applications
+- **Session Timeout**: Auto-logout after inactivity (minutes)
+- **Password Policies**: Minimum length, uppercase, numbers, symbols
+
+#### ⚠️ Danger Zone
+
+- **Maintenance Mode**: Takes the storefront offline with a custom message
+- **Maintenance Message**: Text displayed to visitors during maintenance
 
 ---
 
-## 3. User Management
-
-Access user management at **Admin → Users**.
+## User Management
 
 ### Viewing Users
 
-- View all registered users (customers, vendors, admins)
-- Filter by role (customer, vendor, admin)
-- Filter by status (active, suspended, banned)
-- Search by name, email, or phone
-- Sort by registration date, last login, name
+1. Go to **Admin → Users**.
+2. Filter by role (customer, vendor, admin), status, or registration date.
+3. Search by name or email.
 
 ### User Actions
 
-- **View Profile**: See full user details and activity
-- **Edit Role**: Change user role (customer ↔ vendor ↔ admin)
-- **Suspend Account**: Temporarily disable a user account
-- **Ban Account**: Permanently ban a user
-- **Reset Password**: Send password reset email
-- **Delete Account**: Permanently remove a user (use with caution)
-- **Impersonate**: Temporarily log in as the user (for support)
+| Action | Description |
+|---|---|
+| View Profile | See user details, order history, addresses |
+| Change Role | Promote to vendor or admin |
+| Suspend Account | Temporarily disable login |
+| Delete Account | Permanently remove user (use with caution) |
+| Reset Password | Send password reset email |
+| View Activity Log | See user's activity history |
 
-### Managing Vendors
+### Managing Admin Access
 
-- **Review Applications**: View pending vendor applications
-- **Approve/Reject**: Approve or reject vendor applications
-- **Set Commission Rate**: Configure commission per vendor
-- **Suspend Vendor**: Temporarily suspend a vendor's store
-- **View Store**: Visit the vendor's store page
-- **View Payouts**: Review vendor payout history
-- **Adjust Balance**: Manually adjust vendor payout balance
-
-### Bulk Operations
-
-- Export user list as CSV
-- Send bulk email to filtered users
-- Bulk suspend/activate accounts
-- Bulk assign roles
+- Only grant admin role to trusted personnel.
+- Enable 2FA for all admin accounts.
+- Use the IP whitelist to restrict access to known locations.
+- Regularly audit admin accounts and remove unused ones.
 
 ---
 
-## 4. Product Management
-
-Access product management at **Admin → Products**.
+## Product Management
 
 ### Viewing Products
 
-- View all products across all vendors
-- Filter by vendor, category, status
-- Filter by approval status (approved, pending, rejected)
-- Search by name, SKU, or description
-- Sort by price, date, stock level
+1. Go to **Admin → Products**.
+2. Filter by category, vendor, status, or price range.
+3. Search by name or SKU.
 
 ### Product Actions
 
-- **View Product**: See full product details
-- **Edit Product**: Modify any product field (override vendor)
-- **Approve Product**: Approve pending products
-- **Reject Product**: Reject with reason
-- **Feature Product**: Highlight on homepage
-- **Unfeature Product**: Remove from featured
-- **Delete Product**: Remove a product from the platform
-- **Flag Product**: Flag for review (counterfeit, inappropriate)
-
-### Category Management
-
-Access at **Admin → Products → Categories**:
-
-- **Create Category**: Add new product categories
-- **Edit Category**: Modify name, slug, description, image
-- **Delete Category**: Remove (reassign products first)
-- **Reorder Categories**: Set display order
-- **Create Subcategory**: Add nested categories
-- **Set Category Image**: Upload category thumbnail
+| Action | Description |
+|---|---|
+| View | See full product details, images, reviews |
+| Edit | Modify product information (admin override) |
+| Approve | Make a pending product visible to customers |
+| Reject | Remove a product from the marketplace |
+| Feature | Highlight on the homepage |
+| Delete | Permanently remove product |
 
 ### Product Moderation
 
-- Review flagged products
-- Check for counterfeit listings
-- Verify product images match descriptions
-- Ensure pricing is reasonable
-- Check for prohibited items
+- Review new product submissions from vendors.
+- Check for prohibited items, counterfeit goods, or policy violations.
+- Verify product images match descriptions.
+- Ensure pricing is fair and competitive.
+
+### Category Management
+
+- Add, edit, or remove product categories.
+- Set category display order.
+- Configure category-specific attributes.
 
 ---
 
-## 5. Order Management
-
-Access order management at **Admin → Orders**.
+## Order Management
 
 ### Viewing Orders
 
-- View all orders across the platform
-- Filter by status (pending, confirmed, processing, shipped, delivered, cancelled, refunded)
-- Filter by payment status (pending, success, failed, refunded)
-- Filter by date range
-- Search by order number, customer name, or email
-- Sort by date, total amount, status
+1. Go to **Admin → Orders**.
+2. Filter by status, date range, payment status, or customer.
+3. Search by order ID or customer name.
 
-### Order Actions
+### Order Statuses
 
-- **View Order**: See full order details (items, customer, shipping, payment)
-- **Update Status**: Change order status manually
-- **Issue Refund**: Process full or partial refund
-- **Cancel Order**: Cancel an order with reason
-- **Print Invoice**: Generate printable invoice
-- **Export Orders**: Download as CSV
-- **Contact Customer**: Send email to customer
-- **Contact Vendor**: Send email to the vendor
+| Status | Description |
+|---|---|
+| `pending` | Order placed, awaiting payment confirmation |
+| `confirmed` | Payment confirmed, ready for processing |
+| `processing` | Vendor is preparing the order |
+| `shipped` | Order dispatched with tracking number |
+| `delivered` | Order received by customer |
+| `cancelled` | Order cancelled (by customer or admin) |
+| `refunded` | Refund processed |
 
-### Order Details View
+### Admin Order Actions
 
-Each order detail page shows:
-- Order number and date
-- Customer information (name, email, phone, address)
-- Vendor information for each item
-- Items ordered (name, quantity, price, subtotal)
-- Payment details (gateway, reference, amount, status)
-- Shipping details (carrier, tracking number, status)
-- Order timeline (all status changes with timestamps)
-- Activity logs related to the order
+| Action | Description |
+|---|---|
+| View Details | See full order information |
+| Update Status | Manually change order status |
+| Add Tracking | Add carrier and tracking number |
+| Process Refund | Initiate a full or partial refund |
+| Cancel Order | Cancel and notify customer |
+| Print Invoice | Generate printable invoice |
+| Contact Customer | Send a message to the customer |
 
 ### Handling Disputes
 
-1. Review the order details and communication history
-2. Contact both customer and vendor
-3. Determine the appropriate resolution
-4. Process refund if necessary
-5. Update order status
-6. Log the resolution in activity logs
+1. Review the order details and communication history.
+2. Check the payment and shipping records.
+3. Contact the customer and vendor to mediate.
+4. Process refunds if necessary through the payment gateway.
+5. Log all actions in the activity log.
 
 ---
 
-## 6. Analytics & Reporting
+## Vendor Management
 
-Access analytics at **Admin → Analytics**.
+### Vendor Applications
 
-### Dashboard Metrics
+1. Go to **Admin → Vendors**.
+2. Review pending applications.
+3. Check business name, contact details, and submitted documents.
+4. Approve or reject with a reason.
 
-- **Revenue**: Total, daily, weekly, monthly, yearly
-- **Orders**: Count, average order value, conversion rate
-- **Customers**: New registrations, active users, retention
-- **Vendors**: Active vendors, new applications, top performers
-- **Products**: Total listings, approved, pending, out of stock
+### Vendor Actions
 
-### Revenue Reports
+| Action | Description |
+|---|---|
+| View Profile | See vendor business details |
+| Approve | Activate vendor account |
+| Reject | Decline with reason (email sent automatically) |
+| Suspend | Temporarily disable vendor |
+| View Store | Visit the vendor's storefront |
+| View Products | See all products from this vendor |
+| View Orders | See all orders for this vendor |
+| View Earnings | See vendor payout history |
 
-- Revenue by date range
-- Revenue by payment gateway
-- Revenue by category
-- Revenue by vendor
-- Commission earned
-- Refund totals
+### Store Management
 
-### Sales Reports
+- Monitor store performance and ratings.
+- Review store for policy compliance.
+- Suspend stores that violate terms of service.
+- Feature high-performing stores on the homepage.
 
-- Top-selling products
-- Top vendors by sales
-- Top categories by revenue
-- Sales by region/city
-- Sales trends over time
+---
 
-### Customer Analytics
+## Analytics & Reports
 
-- Customer growth chart
-- Repeat purchase rate
-- Average customer lifetime value
-- Customer acquisition sources
-- Loyalty program participation
+### Available Reports
+
+| Report | Description |
+|---|---|
+| Sales Report | Revenue by day, week, month, or year |
+| Product Performance | Best and worst selling products |
+| Category Analysis | Revenue and order count by category |
+| Vendor Performance | Sales, ratings, and fulfillment metrics |
+| Customer Insights | Registration trends, repeat purchase rate |
+| Payment Gateway Report | Transaction volume by gateway |
+| Refund Report | Refund volume and reasons |
+| Inventory Report | Stock levels and low-stock alerts |
 
 ### Exporting Reports
 
-All reports can be exported as:
-- CSV (for spreadsheet analysis)
-- PDF (for presentations)
-- JSON (for API integration)
+1. Go to **Admin → Analytics**.
+2. Select the report type and date range.
+3. Click **Export** to download as CSV or PDF.
+
+### Custom Dashboards
+
+- Create custom dashboard views with selected metrics.
+- Schedule automated email reports.
+- Set up alerts for threshold-based triggers (e.g., low stock, high refund rate).
 
 ---
 
-## 7. Audit Logs
+## Audit Logs
 
-Access audit logs at **Admin → Audit Logs**.
+The `activity_logs` table tracks all significant actions in the system.
 
 ### What is Logged
 
-The `activity_logs` table records:
-- User authentication events (login, logout, failed attempts)
-- Admin actions (user role changes, product approvals, settings changes)
+- User authentication events (login, logout, password changes)
 - Order status changes
 - Payment events (success, failure, refund)
-- Vendor application approvals/rejections
-- Product creation, updates, deletions
-- System configuration changes
+- Product creation, updates, and deletions
+- Vendor approvals and rejections
+- Admin settings changes
+- Maintenance mode toggles
 
-### Viewing Logs
+### Viewing Audit Logs
 
-- Filter by user (admin, vendor, customer, system)
-- Filter by action type
-- Filter by entity type (order, product, payment, user)
-- Filter by date range
-- Search by keyword
-- Export as CSV
+1. Go to **Admin → Audit Logs**.
+2. Filter by:
+   - Action type (e.g., `payment.success`, `order.cancelled`)
+   - Entity type (e.g., `order`, `product`, `payment`)
+   - Date range
+   - User/admin who performed the action
+3. Export logs for compliance and reporting.
 
-### Log Entry Fields
+### Retention Policy
 
-| Field | Description |
-|-------|-------------|
-| Timestamp | When the action occurred |
-| User | Who performed the action |
-| Action | What was done (e.g., `payment_success`, `product_approved`) |
-| Entity Type | What was affected (e.g., `order`, `product`, `user`) |
-| Entity ID | Specific record ID |
-| Details | Additional context (JSON) |
-| IP Address | Request IP address |
-
-### Compliance
-
-- Logs are retained indefinitely
-- Logs cannot be deleted by admins
-- Only super admins can access export functionality
-- All admin actions are logged automatically
+- Activity logs are retained for 90 days by default.
+- Configure retention in **Settings → Security**.
+- Archive old logs to cold storage for long-term compliance.
 
 ---
 
-## 8. Support Tickets
+## Support Tickets
 
-Access support tickets at **Admin → Support**.
+### Viewing Tickets
 
-### Ticket Queue
-
-- View all support tickets
-- Filter by status (open, in progress, resolved, closed)
-- Filter by priority (low, medium, high, urgent)
-- Filter by category (order issue, payment, account, product, other)
-- Sort by date, priority, status
+1. Go to **Admin → Support Tickets**.
+2. Filter by status (open, in-progress, resolved, closed), priority, or category.
 
 ### Managing Tickets
 
-- **Assign Ticket**: Assign to a specific admin
-- **Respond**: Reply to the customer
-- **Change Priority**: Update ticket priority
-- **Change Status**: Update ticket status
-- **Add Internal Note**: Add private notes (not visible to customer)
-- **Escalate**: Escalate to senior admin
-- **Close Ticket**: Mark as resolved and close
-- **Reopen**: Reopen a closed ticket
+| Action | Description |
+|---|---|
+| View | Read the full ticket conversation |
+| Reply | Respond to the customer |
+| Assign | Assign to a team member |
+| Change Priority | Set as low, medium, high, or urgent |
+| Change Status | Update ticket status |
+| Close | Mark as resolved and close |
+| Escalate | Escalate to senior support or engineering |
 
-### Ticket Workflow
+### Best Practices
 
-1. Customer creates a ticket from the help center
-2. Ticket appears in the admin queue
-3. Admin assigns the ticket
-4. Admin responds or requests more information
-5. Issue is resolved
-6. Admin closes the ticket
-7. Customer can reopen if needed
-
-### Common Support Scenarios
-
-#### Payment Issues
-1. Verify payment status in the payments table
-2. Check the payment gateway dashboard
-3. If payment succeeded but order is pending, manually confirm
-4. If payment failed, advise customer to retry
-5. Process refund if payment was duplicate
-
-#### Order Not Received
-1. Check shipping status and tracking number
-2. Contact the vendor for fulfillment status
-3. Contact the shipping carrier
-4. Arrange redelivery or refund as appropriate
-
-#### Vendor Disputes
-1. Review the order and communication history
-2. Contact both parties
-3. Review evidence (photos, messages)
-4. Make a determination
-5. Process refund or resolution
-6. Document the outcome
-
-#### Account Access
-1. Verify the user's identity
-2. Reset password if needed
-3. Unlock account if suspended by mistake
-4. Enable 2FA if account was compromised
+- Respond to tickets within 24 hours.
+- Use canned responses for common questions.
+- Link related orders or products in the ticket.
+- Escalate payment or security issues immediately.
+- Close resolved tickets promptly.
 
 ---
 
-## Best Practices
+## Security Best Practices
 
-- **Review vendor applications within 48 hours** to maintain vendor satisfaction
-- **Monitor refund rates** — high rates may indicate product quality issues
-- **Check audit logs weekly** for any unauthorized access attempts
-- **Update platform settings** as business requirements change
-- **Respond to support tickets within 24 hours** for high-priority items
-- **Review analytics monthly** to identify trends and opportunities
-- **Backup database before major changes** to platform settings
-- **Test payment flows after gateway configuration changes**
+### Admin Account Security
+
+- **Enable 2FA** for all admin accounts.
+- Use **strong, unique passwords** (minimum 12 characters).
+- **Limit admin access** to only those who need it.
+- **Review admin accounts** monthly and remove inactive ones.
+- Use the **IP whitelist** to restrict admin panel access.
+
+### Data Protection
+
+- Never share the Supabase service role key.
+- Never expose server-side environment variables to the client.
+- Use RLS policies to enforce data access control.
+- Regularly backup the database.
+- Monitor for suspicious activity in audit logs.
+
+### Payment Security
+
+- Never log full payment card numbers.
+- Verify webhook signatures on all payment callbacks.
+- Monitor for unusual refund patterns.
+- Reconcile payments with gateway reports regularly.
+
+### Incident Response
+
+1. **Identify** the scope and severity of the incident.
+2. **Contain** by disabling affected accounts or enabling maintenance mode.
+3. **Investigate** using audit logs and payment records.
+4. **Remediate** by fixing the root cause.
+5. **Communicate** with affected users.
+6. **Document** the incident and lessons learned.
+
+---
+
+## Support
+
+If you need assistance with admin operations, please contact our support team:
+
+- **Phone:** +233 55 162 1261
+- **Email:** smartmart304@gmail.com
+
+Our team is available to help with admin access, configuration, and any issues you encounter while managing the platform.
