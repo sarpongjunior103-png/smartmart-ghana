@@ -27,7 +27,7 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
-          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://api.paystack.co https://api.stripe.com https://api.flutterwave.com https://payproxyapi.hubtel.com; frame-src 'self' https://js.stripe.com;" },
+          { key: 'Content-Security-Policy', value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co https://api.openai.com https://api.paystack.co https://api.stripe.com https://api.flutterwave.com https://payproxyapi.hubtel.com; frame-src 'self' https://js.stripe.com;" },
         ],
       },
       {
