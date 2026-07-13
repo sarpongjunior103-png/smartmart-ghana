@@ -60,6 +60,8 @@ export default function AdminDashboardPage() {
   const [allProfiles, setAllProfiles] = useState<RecentReg[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [vendorsMap, setVendorsMap] = useState<Record<string, string>>({});
+  const [productFilter, setProductFilter] = useState<string>('all');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -114,6 +116,11 @@ export default function AdminDashboardPage() {
     const pendingData = (pendingVendors ?? []) as PendingSeller[];
     const allOrderList = (allOrders ?? []) as Order[];
     const productList = (products ?? []) as Product[];
+
+    // Build vendors map (vendor_id -> business_name)
+    const vMap: Record<string, string> = {};
+    vendorList.forEach((v) => { vMap[v.id] = v.business_name; });
+    setVendorsMap(vMap);
 
     const totalRevenue = allOrderList
       .filter((o) => !['cancelled', 'refunded'].includes(o.status))
@@ -194,6 +201,42 @@ export default function AdminDashboardPage() {
     setActionLoading(null);
     if (error) { toast.error('Failed to reject seller'); return; }
     toast.success('Seller rejected');
+    fetchData();
+  };
+
+  const handleApproveProduct = async (id: string) => {
+    setActionLoading(id);
+    const { error } = await supabase.from('products').update({ status: 'published' }).eq('id', id);
+    setActionLoading(null);
+    if (error) { toast.error('Failed to approve product'); return; }
+    toast.success('Product approved & published');
+    fetchData();
+  };
+
+  const handleRejectProduct = async (id: string) => {
+    setActionLoading(id);
+    const { error } = await supabase.from('products').update({ status: 'rejected' }).eq('id', id);
+    setActionLoading(null);
+    if (error) { toast.error('Failed to reject product'); return; }
+    toast.success('Product rejected');
+    fetchData();
+  };
+
+  const handleSuspendProduct = async (id: string) => {
+    setActionLoading(id);
+    const { error } = await supabase.from('products').update({ status: 'suspended' }).eq('id', id);
+    setActionLoading(null);
+    if (error) { toast.error('Failed to suspend product'); return; }
+    toast.success('Product suspended');
+    fetchData();
+  };
+
+  const handleReactivateProduct = async (id: string) => {
+    setActionLoading(id);
+    const { error } = await supabase.from('products').update({ status: 'published' }).eq('id', id);
+    setActionLoading(null);
+    if (error) { toast.error('Failed to reactivate product'); return; }
+    toast.success('Product reactivated');
     fetchData();
   };
 
@@ -484,7 +527,25 @@ export default function AdminDashboardPage() {
           {/* Products tab */}
           <TabsContent value="products">
             <Card>
-              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Package className="h-5 w-5" /> All Products</CardTitle></CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <CardTitle className="text-lg flex items-center gap-2"><Package className="h-5 w-5" /> All Products</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Filter:</span>
+                    <Select value={productFilter} onValueChange={setProductFilter}>
+                      <SelectTrigger className="h-8 w-36 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="suspended">Suspended</SelectItem>
+                        <SelectItem value="rejected">Rejected</SelectItem>
+                        <SelectItem value="draft">Draft</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardHeader>
               <CardContent>
                 {dataLoading ? <p className="text-sm text-muted-foreground">Loading...</p> : (
                   <div className="overflow-x-auto">
@@ -492,32 +553,74 @@ export default function AdminDashboardPage() {
                       <thead>
                         <tr className="border-b text-left text-xs font-semibold text-muted-foreground uppercase">
                           <th className="py-3">Product</th>
+                          <th className="py-3">Vendor</th>
                           <th className="py-3">Price</th>
                           <th className="py-3">Stock</th>
                           <th className="py-3">Status</th>
+                          <th className="py-3 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {allProducts.map((p) => (
-                          <tr key={p.id} className="border-b">
-                            <td className="py-3">
-                              <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-muted">
-                                  {(p as any).image_url && (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img src={(p as any).image_url} alt="" className="h-full w-full object-cover" />
-                                  )}
-                                </div>
-                                <span className="text-sm font-medium truncate max-w-[200px]">{p.name}</span>
-                              </div>
-                            </td>
-                            <td className="py-3 text-sm font-medium">{formatPrice(Number(p.price))}</td>
-                            <td className="py-3 text-sm">
-                              <span className={p.stock <= LOW_STOCK_THRESHOLD ? 'text-amber-600 font-medium' : ''}>{p.stock}</span>
-                            </td>
-                            <td className="py-3"><Badge variant="secondary" className="text-xs">{p.status}</Badge></td>
-                          </tr>
-                        ))}
+                        {allProducts
+                          .filter((p) => productFilter === 'all' || p.status === productFilter)
+                          .map((p) => {
+                            const status = p.status || 'draft';
+                            const statusStyles: Record<string, string> = {
+                              published: 'bg-green-100 text-green-800',
+                              pending: 'bg-yellow-100 text-yellow-800',
+                              rejected: 'bg-red-100 text-red-800',
+                              suspended: 'bg-orange-100 text-orange-800',
+                              draft: 'bg-gray-100 text-gray-800',
+                              archived: 'bg-slate-200 text-slate-800',
+                            };
+                            return (
+                              <tr key={p.id} className="border-b">
+                                <td className="py-3">
+                                  <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-muted">
+                                      {(p as any).image_url && (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img src={(p as any).image_url} alt="" className="h-full w-full object-cover" />
+                                      )}
+                                    </div>
+                                    <span className="text-sm font-medium truncate max-w-[200px]">{p.name}</span>
+                                  </div>
+                                </td>
+                                <td className="py-3 text-sm text-muted-foreground">{vendorsMap[(p as any).vendor_id] ?? '-'}</td>
+                                <td className="py-3 text-sm font-medium">{formatPrice(Number(p.price))}</td>
+                                <td className="py-3 text-sm">
+                                  <span className={p.stock <= LOW_STOCK_THRESHOLD ? 'text-amber-600 font-medium' : ''}>{p.stock}</span>
+                                </td>
+                                <td className="py-3">
+                                  <Badge className={`text-xs capitalize ${statusStyles[status] ?? 'bg-gray-100 text-gray-800'}`}>{status}</Badge>
+                                </td>
+                                <td className="py-3 text-right">
+                                  <div className="flex justify-end gap-1">
+                                    {status === 'pending' && (
+                                      <>
+                                        <Button size="sm" className="h-8 px-2 bg-green-600 hover:bg-green-700" onClick={() => handleApproveProduct(p.id)} disabled={actionLoading === p.id}>
+                                          <CheckCircle2 className="h-4 w-4" /> Approve
+                                        </Button>
+                                        <Button size="sm" variant="destructive" className="h-8 px-2" onClick={() => handleRejectProduct(p.id)} disabled={actionLoading === p.id}>
+                                          <XCircle className="h-4 w-4" /> Reject
+                                        </Button>
+                                      </>
+                                    )}
+                                    {status === 'published' && (
+                                      <Button size="sm" variant="outline" className="h-8 px-2 text-orange-600 border-orange-300 hover:bg-orange-50" onClick={() => handleSuspendProduct(p.id)} disabled={actionLoading === p.id}>
+                                        Suspend
+                                      </Button>
+                                    )}
+                                    {(status === 'suspended' || status === 'rejected') && (
+                                      <Button size="sm" className="h-8 px-2" onClick={() => handleReactivateProduct(p.id)} disabled={actionLoading === p.id}>
+                                        <RotateCcw className="h-4 w-4" /> Reactivate
+                                      </Button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                       </tbody>
                     </table>
                   </div>

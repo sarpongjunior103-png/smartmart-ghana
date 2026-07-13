@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Navbar } from '@/components/shared/navbar';
 import { ArrowLeft, Eye, EyeOff, Loader2, Upload, CheckCircle2, Clock } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { COUNTRIES, BUSINESS_CATEGORIES } from '@/lib/constants';
+import { COUNTRIES, BUSINESS_CATEGORIES, GHANA_CITIES } from '@/lib/constants';
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
@@ -25,8 +25,8 @@ export default function SellerRegisterPage() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [idFile, setIdFile] = useState<File | null>(null);
   const [form, setForm] = useState({
-    businessName: '', ownerName: '', businessEmail: '', phone: '',
-    country: 'Ghana', businessAddress: '', businessCategory: BUSINESS_CATEGORIES[0],
+    businessName: '', firstName: '', lastName: '', businessEmail: '', phone: '',
+    country: 'Ghana', city: GHANA_CITIES[0], businessAddress: '', businessCategory: BUSINESS_CATEGORIES[0],
     taxNumber: '', password: '', confirmPassword: '', acceptPolicy: false,
   });
 
@@ -59,11 +59,15 @@ export default function SellerRegisterPage() {
       idUrl = await uploadFile(idFile, `ids/${Date.now()}-${idFile.name}`);
     }
 
+    const fullName = `${form.firstName} ${form.lastName}`.trim();
     const { error } = await signUp(form.businessEmail, form.password, {
       role: 'vendor',
-      first_name: form.ownerName,
+      first_name: form.firstName,
+      last_name: form.lastName,
+      full_name: fullName,
       phone: form.phone,
       country: form.country,
+      city: form.city,
       business_name: form.businessName,
       business_email: form.businessEmail,
       business_address: form.businessAddress,
@@ -131,9 +135,15 @@ export default function SellerRegisterPage() {
                   <Label htmlFor="businessName">Business Name</Label>
                   <Input id="businessName" value={form.businessName} onChange={(e) => set('businessName', e.target.value)} required />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="ownerName">Owner Name</Label>
-                  <Input id="ownerName" value={form.ownerName} onChange={(e) => set('ownerName', e.target.value)} required />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input id="firstName" value={form.firstName} onChange={(e) => set('firstName', e.target.value)} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input id="lastName" value={form.lastName} onChange={(e) => set('lastName', e.target.value)} required />
+                  </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
@@ -154,20 +164,29 @@ export default function SellerRegisterPage() {
                     </select>
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="city">City</Label>
+                    <select id="city" value={form.city} onChange={(e) => set('city', e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                      {GHANA_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
                     <Label htmlFor="businessCategory">Business Category</Label>
                     <select id="businessCategory" value={form.businessCategory} onChange={(e) => set('businessCategory', e.target.value)}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                       {BUSINESS_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="taxNumber">Tax Number (Optional)</Label>
+                    <Input id="taxNumber" value={form.taxNumber} onChange={(e) => set('taxNumber', e.target.value)} />
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="businessAddress">Business Address</Label>
                   <Input id="businessAddress" value={form.businessAddress} onChange={(e) => set('businessAddress', e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="taxNumber">Tax Number (Optional)</Label>
-                  <Input id="taxNumber" value={form.taxNumber} onChange={(e) => set('taxNumber', e.target.value)} />
                 </div>
 
                 {/* File uploads */}

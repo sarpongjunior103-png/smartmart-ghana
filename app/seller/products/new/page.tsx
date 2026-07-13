@@ -37,6 +37,7 @@ export default function ProductFormPage() {
   const [form, setForm] = useState({
     name: '', brand: '', description: '', price: '', discountPrice: '',
     stock: '', categoryId: '', isFeatured: false, status: 'draft' as 'draft' | 'published',
+    sku: '', barcode: '', videoUrl: '', shippingWeight: '', warranty: '', deliveryTime: '',
   });
 
   useEffect(() => {
@@ -67,6 +68,12 @@ export default function ProductFormPage() {
           categoryId: p.category_id ?? '',
           isFeatured: p.is_featured ?? false,
           status: p.status ?? 'draft',
+          sku: p.sku ?? '',
+          barcode: p.barcode ?? '',
+          videoUrl: p.video_url ?? '',
+          shippingWeight: p.shipping_weight?.toString() ?? '',
+          warranty: p.warranty ?? '',
+          deliveryTime: p.delivery_time ?? '',
         });
         setTagsInput((p.tags ?? []).join(', '));
         if (p.specifications) {
@@ -150,6 +157,12 @@ export default function ProductFormPage() {
       specifications: Object.keys(specifications).length > 0 ? specifications : null,
       is_featured: form.isFeatured,
       status: saveAsDraft ? 'draft' : form.status,
+      sku: form.sku || null,
+      barcode: form.barcode || null,
+      video_url: form.videoUrl || null,
+      shipping_weight: form.shippingWeight ? Number(form.shippingWeight) : null,
+      warranty: form.warranty || null,
+      delivery_time: form.deliveryTime || null,
     };
 
     try {
@@ -327,6 +340,41 @@ export default function ProductFormPage() {
                 </div>
               ))}
               <Button type="button" variant="outline" size="sm" onClick={addSpecRow}>Add Specification</Button>
+            </CardContent>
+          </Card>
+
+          {/* Shipping & Additional */}
+          <Card>
+            <CardHeader><CardTitle className="text-lg">Shipping & Additional</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="sku">SKU</Label>
+                  <Input id="sku" placeholder="e.g. SM-A525-128" value={form.sku} onChange={(e) => set('sku', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="barcode">Barcode</Label>
+                  <Input id="barcode" placeholder="e.g. 8801643554321" value={form.barcode} onChange={(e) => set('barcode', e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="videoUrl">Video URL</Label>
+                <Input id="videoUrl" type="url" placeholder="e.g. https://www.youtube.com/watch?v=..." value={form.videoUrl} onChange={(e) => set('videoUrl', e.target.value)} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="shippingWeight">Shipping Weight (kg)</Label>
+                  <Input id="shippingWeight" type="number" step="0.01" min="0" placeholder="e.g. 0.5" value={form.shippingWeight} onChange={(e) => set('shippingWeight', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="warranty">Warranty</Label>
+                  <Input id="warranty" placeholder="e.g. 1 year manufacturer warranty" value={form.warranty} onChange={(e) => set('warranty', e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="deliveryTime">Delivery Time</Label>
+                  <Input id="deliveryTime" placeholder="e.g. 1-3 business days" value={form.deliveryTime} onChange={(e) => set('deliveryTime', e.target.value)} />
+                </div>
+              </div>
             </CardContent>
           </Card>
 

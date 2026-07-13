@@ -1,17 +1,18 @@
+export type UserRole = 'customer' | 'vendor' | 'admin';
+
 export type Profile = {
   id: string;
   email: string;
   first_name: string | null;
   last_name: string | null;
   phone: string | null;
-  role: 'customer' | 'vendor' | 'admin';
+  role: UserRole;
   avatar_url: string | null;
   country: string | null;
+  city: string | null;
   language: string | null;
   referral_code: string | null;
-  vendor_status: 'pending' | 'approved' | 'rejected' | null;
   created_at: string;
-  updated_at: string;
 };
 
 export type Category = {
@@ -20,37 +21,44 @@ export type Category = {
   slug: string;
   parent_id: string | null;
   icon: string | null;
+  image_url: string | null;
   created_at: string;
 };
 
 export type Product = {
   id: string;
-  vendor_id: string;
-  category_id: string;
+  vendor_id: string | null;
+  category_id: string | null;
   name: string;
-  slug: string;
-  description: string;
+  slug: string | null;
+  description: string | null;
   price: number;
-  compare_price: number | null;
+  discount_price: number | null;
+  image_url: string | null;
   stock: number;
   brand: string | null;
   sku: string | null;
-  status: 'draft' | 'published' | 'archived';
+  barcode: string | null;
+  video_url: string | null;
+  shipping_weight: number | null;
+  warranty: string | null;
+  delivery_time: string | null;
+  specifications: Record<string, string> | null;
+  tags: string[];
   is_featured: boolean;
   rating: number;
   review_count: number;
-  tags: string[];
-  images: ProductImage[];
+  status: 'draft' | 'published' | 'archived' | 'pending' | 'rejected' | 'suspended';
   created_at: string;
-  updated_at: string;
+  updated_at: string | null;
 };
 
 export type ProductImage = {
   id: string;
   product_id: string;
-  url: string;
-  alt_text: string | null;
+  image_url: string;
   position: number;
+  created_at: string;
 };
 
 export type Cart = {
@@ -63,18 +71,20 @@ export type Cart = {
 
 export type Order = {
   id: string;
+  order_number: string;
   user_id: string;
-  total: number;
-  subtotal: number;
-  tax: number;
-  shipping_cost: number;
-  discount: number;
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
-  delivery_status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'returned' | null;
+  subtotal: number;
+  shipping_fee: number;
+  discount_amount: number;
+  total: number;
+  payment_method: string | null;
+  delivery_method: string | null;
+  coupon_code: string | null;
+  shipping_address: any;
   tracking_number: string | null;
   estimated_delivery_date: string | null;
-  shipping_address: any;
-  payment_id: string | null;
+  delivery_status: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -83,23 +93,26 @@ export type OrderItem = {
   id: string;
   order_id: string;
   product_id: string;
-  quantity: number;
-  price: number;
   product_name: string;
   product_image: string | null;
+  price: number;
+  quantity: number;
+  vendor_id: string | null;
+  created_at: string;
 };
 
 export type Payment = {
   id: string;
   order_id: string;
-  user_id: string | null;
+  provider: string | null;
   amount: number;
   status: 'pending' | 'completed' | 'failed' | 'refunded';
-  method: string;
+  reference: string | null;
+  phone: string | null;
   gateway: string | null;
   gateway_reference: string | null;
   gateway_response: any;
-  currency: string;
+  currency: string | null;
   fees: number | null;
   created_at: string;
 };
@@ -116,11 +129,12 @@ export type Review = {
 export type Coupon = {
   id: string;
   code: string;
-  type: 'percentage' | 'fixed';
-  value: number;
-  min_order: number | null;
+  description: string | null;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  min_order_amount: number | null;
   max_uses: number | null;
-  uses: number;
+  used_count: number;
   active: boolean;
   expires_at: string | null;
   created_at: string;
@@ -128,17 +142,60 @@ export type Coupon = {
 
 export type Vendor = {
   id: string;
-  user_id: string;
   business_name: string;
-  slug: string;
-  description: string | null;
+  owner_name: string | null;
+  business_email: string | null;
+  phone: string | null;
+  country: string | null;
+  city: string | null;
+  business_address: string | null;
+  business_category: string | null;
+  tax_number: string | null;
   logo_url: string | null;
+  id_url: string | null;
+  slug: string | null;
+  description: string | null;
   banner_url: string | null;
-  status: 'pending' | 'approved' | 'suspended';
   rating: number;
   contact_email: string | null;
   contact_phone: string | null;
-  address: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'suspended';
+  created_at: string;
+};
+
+export type StoreFollow = {
+  id: string;
+  follower_id: string;
+  vendor_id: string;
+  created_at: string;
+};
+
+export type ProductQuestion = {
+  id: string;
+  product_id: string;
+  asker_id: string;
+  question: string;
+  answer: string | null;
+  answered_at: string | null;
+  created_at: string;
+};
+
+export type VendorEarning = {
+  id: string;
+  vendor_id: string;
+  order_item_id: string | null;
+  amount: number;
+  type: 'earning' | 'withdrawal';
+  status: 'pending' | 'completed' | 'failed';
+  created_at: string;
+};
+
+export type StoreReview = {
+  id: string;
+  vendor_id: string;
+  reviewer_id: string;
+  rating: number;
+  comment: string | null;
   created_at: string;
 };
 
@@ -176,10 +233,14 @@ export type TrackingEvent = {
 
 export type SupportTicket = {
   id: string;
+  ticket_number: string;
   user_id: string;
   subject: string;
-  status: 'open' | 'pending' | 'resolved' | 'closed';
+  description: string | null;
+  category: string | null;
   priority: 'low' | 'medium' | 'high' | 'urgent';
+  status: 'open' | 'pending' | 'resolved' | 'closed';
+  order_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -227,18 +288,23 @@ export type ActivityLog = {
 export type InventoryLog = {
   id: string;
   product_id: string;
-  change_type: 'increase' | 'decrease' | 'set';
-  quantity: number;
+  vendor_id: string;
+  change_type: string;
+  quantity_change: number;
+  previous_stock: number;
+  new_stock: number;
   reason: string | null;
   created_at: string;
 };
 
 export type ChatConversation = {
   id: string;
-  customer_id: string;
-  vendor_id: string | null;
-  support_agent_id: string | null;
-  status: 'active' | 'closed';
+  participant1_id: string;
+  participant2_id: string;
+  type: string;
+  product_id: string | null;
+  status: string;
+  last_message_at: string;
   created_at: string;
   updated_at: string;
 };
@@ -248,7 +314,6 @@ export type ChatMessage = {
   conversation_id: string;
   sender_id: string;
   message: string;
-  attachments: any;
   read: boolean;
   created_at: string;
 };
