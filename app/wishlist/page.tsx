@@ -1,6 +1,8 @@
 // @ts-nocheck
 'use client'
 
+export const dynamic = 'force-dynamic';
+
 import { useEffect, useState } from 'react';
 import { ProductCard } from '@/components/shared/product-card';
 import { supabase } from '@/lib/supabase/client';

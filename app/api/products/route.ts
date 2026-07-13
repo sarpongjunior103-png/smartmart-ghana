@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
         warranty,
         delivery_time,
         is_featured: is_featured || false,
-        status: status || 'draft',
+        status: status || 'pending',
         rating: 0,
         review_count: 0,
       })

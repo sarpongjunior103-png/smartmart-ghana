@@ -8,11 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Navbar } from '@/components/shared/navbar';
+import { RefundsTab } from '@/components/admin/refunds-tab';
 import { Users, Store, Clock, Package, CheckCircle2, XCircle, LogOut, TrendingUp, Loader2, ShoppingCart, DollarSign, RotateCcw, CreditCard, Ticket, Settings, LifeBuoy, Truck, BarChart3, BarChart2 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase/client';
@@ -61,7 +63,7 @@ export default function AdminDashboardPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [vendorsMap, setVendorsMap] = useState<Record<string, string>>({});
-  const [productFilter, setProductFilter] = useState<string>('all');
+  const [productFilter, setProductFilter] = useState<string>('pending');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -186,40 +188,96 @@ export default function AdminDashboardPage() {
     setDataLoading(false);
   };
 
+  const [rejectionModal, setRejectionModal] = useState<{ vendorId: string; vendorName: string } | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [rejectingSeller, setRejectingSeller] = useState(false);
+
   const handleApprove = async (id: string) => {
     setActionLoading(id);
-    const { error } = await supabase.from('vendors').update({ status: 'approved' }).eq('id', id);
+    try {
+      const res = await fetch('/api/sellers/verify', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendor_id: id, action: 'approve' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to approve seller');
+      toast.success('Seller approved — email notification sent');
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to approve seller');
+    }
     setActionLoading(null);
-    if (error) { toast.error('Failed to approve seller'); return; }
-    toast.success('Seller approved');
-    fetchData();
   };
 
-  const handleReject = async (id: string) => {
-    setActionLoading(id);
-    const { error } = await supabase.from('vendors').update({ status: 'rejected' }).eq('id', id);
-    setActionLoading(null);
-    if (error) { toast.error('Failed to reject seller'); return; }
-    toast.success('Seller rejected');
-    fetchData();
+  const handleReject = async () => {
+    if (!rejectionModal || !rejectionReason.trim()) {
+      toast.error('Please provide a reason for rejection');
+      return;
+    }
+    setRejectingSeller(true);
+    try {
+      const res = await fetch('/api/sellers/verify', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vendor_id: rejectionModal.vendorId, action: 'reject', rejection_reason: rejectionReason }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reject seller');
+      toast.success('Seller rejected — email notification sent');
+      setRejectionModal(null);
+      setRejectionReason('');
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to reject seller');
+    }
+    setRejectingSeller(false);
   };
+
+  const [productRejectionModal, setProductRejectionModal] = useState<{ productId: string; productName: string } | null>(null);
+  const [productRejectionReason, setProductRejectionReason] = useState('');
+  const [rejectingProduct, setRejectingProduct] = useState(false);
 
   const handleApproveProduct = async (id: string) => {
     setActionLoading(id);
-    const { error } = await supabase.from('products').update({ status: 'published' }).eq('id', id);
+    try {
+      const res = await fetch('/api/products/approve', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: id, action: 'approve' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to approve product');
+      toast.success('Product approved & published — seller notified by email');
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to approve product');
+    }
     setActionLoading(null);
-    if (error) { toast.error('Failed to approve product'); return; }
-    toast.success('Product approved & published');
-    fetchData();
   };
 
-  const handleRejectProduct = async (id: string) => {
-    setActionLoading(id);
-    const { error } = await supabase.from('products').update({ status: 'rejected' }).eq('id', id);
-    setActionLoading(null);
-    if (error) { toast.error('Failed to reject product'); return; }
-    toast.success('Product rejected');
-    fetchData();
+  const handleRejectProduct = async () => {
+    if (!productRejectionModal || !productRejectionReason.trim()) {
+      toast.error('Please provide a reason for rejection');
+      return;
+    }
+    setRejectingProduct(true);
+    try {
+      const res = await fetch('/api/products/approve', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productRejectionModal.productId, action: 'reject', rejection_reason: productRejectionReason }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reject product');
+      toast.success('Product rejected — seller notified by email');
+      setProductRejectionModal(null);
+      setProductRejectionReason('');
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to reject product');
+    }
+    setRejectingProduct(false);
   };
 
   const handleSuspendProduct = async (id: string) => {
@@ -359,6 +417,7 @@ export default function AdminDashboardPage() {
             <TabsTrigger value="orders" className="gap-1.5"><ShoppingCart className="h-4 w-4" /> Orders</TabsTrigger>
             <TabsTrigger value="products" className="gap-1.5"><Package className="h-4 w-4" /> Products</TabsTrigger>
             <TabsTrigger value="payments" className="gap-1.5"><CreditCard className="h-4 w-4" /> Payments</TabsTrigger>
+            <TabsTrigger value="refunds" className="gap-1.5"><RotateCcw className="h-4 w-4" /> Refunds</TabsTrigger>
             <TabsTrigger value="coupons" className="gap-1.5"><Ticket className="h-4 w-4" /> Coupons</TabsTrigger>
             <TabsTrigger value="shipping" className="gap-1.5"><Truck className="h-4 w-4" /> Shipping</TabsTrigger>
             <TabsTrigger value="tickets" className="gap-1.5"><LifeBuoy className="h-4 w-4" /> Support</TabsTrigger>
@@ -389,7 +448,7 @@ export default function AdminDashboardPage() {
                           <Button size="sm" className="h-8 px-2 bg-green-600 hover:bg-green-700" onClick={() => handleApprove(v.id)} disabled={actionLoading === v.id}>
                             <CheckCircle2 className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="destructive" className="h-8 px-2" onClick={() => handleReject(v.id)} disabled={actionLoading === v.id}>
+                          <Button size="sm" variant="destructive" className="h-8 px-2" onClick={() => setRejectionModal({ vendorId: v.id, vendorName: v.business_name })} disabled={actionLoading === v.id}>
                             <XCircle className="h-4 w-4" />
                           </Button>
                         </div>
@@ -601,7 +660,7 @@ export default function AdminDashboardPage() {
                                         <Button size="sm" className="h-8 px-2 bg-green-600 hover:bg-green-700" onClick={() => handleApproveProduct(p.id)} disabled={actionLoading === p.id}>
                                           <CheckCircle2 className="h-4 w-4" /> Approve
                                         </Button>
-                                        <Button size="sm" variant="destructive" className="h-8 px-2" onClick={() => handleRejectProduct(p.id)} disabled={actionLoading === p.id}>
+                                        <Button size="sm" variant="destructive" className="h-8 px-2" onClick={() => setProductRejectionModal({ productId: p.id, productName: p.name })} disabled={actionLoading === p.id}>
                                           <XCircle className="h-4 w-4" /> Reject
                                         </Button>
                                       </>
@@ -668,6 +727,11 @@ export default function AdminDashboardPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Refunds tab */}
+          <TabsContent value="refunds">
+            <RefundsTab />
           </TabsContent>
 
           {/* Coupons tab */}
@@ -934,6 +998,75 @@ export default function AdminDashboardPage() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Rejection Reason Modal */}
+        {rejectionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <Card className="max-w-md w-full">
+              <CardHeader>
+                <CardTitle className="text-lg">Reject Seller Application</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Provide a reason for rejecting <strong>{rejectionModal.vendorName}</strong>. This will be included in the email sent to the seller.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="rejection_reason">Reason for Rejection</Label>
+                  <Textarea
+                    id="rejection_reason"
+                    rows={4}
+                    placeholder="e.g. Business registration documents are incomplete..."
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setRejectionModal(null); setRejectionReason(''); }}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={handleReject} disabled={rejectingSeller || !rejectionReason.trim()}>
+                    {rejectingSeller && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Reject & Notify
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        {/* Product Rejection Modal */}
+        {productRejectionModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <Card className="max-w-md w-full">
+              <CardHeader>
+                <CardTitle className="text-lg">Reject Product</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Provide a reason for rejecting <strong>{productRejectionModal.productName}</strong>. This will be emailed to the seller.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="product_rejection_reason">Reason for Rejection</Label>
+                  <Textarea
+                    id="product_rejection_reason"
+                    rows={4}
+                    placeholder="e.g. Product images do not meet quality standards..."
+                    value={productRejectionReason}
+                    onChange={(e) => setProductRejectionReason(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => { setProductRejectionModal(null); setProductRejectionReason(''); }}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={handleRejectProduct} disabled={rejectingProduct || !productRejectionReason.trim()}>
+                    {rejectingProduct && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Reject & Notify
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
     </>
   );

@@ -8,8 +8,10 @@ import { Navbar } from '@/components/shared/navbar';
 import { Footer } from '@/components/shared/footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Package, Loader2, ChevronRight, Download } from 'lucide-react';
+import { Package, Loader2, ChevronRight, Download, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase/client';
 import { formatPrice, ORDER_STATUS_LABELS } from '@/lib/constants';
@@ -53,14 +55,47 @@ export default function OrdersPage() {
     })();
   }, [user, authLoading]);
 
+  const [refundModal, setRefundModal] = useState<{ orderId: string; orderNumber: string } | null>(null);
+  const [refundReason, setRefundReason] = useState('');
+  const [refundLoading, setRefundLoading] = useState(false);
+
   const cancelOrder = async (orderId: string) => {
-    const { error } = await supabase.from('orders').update({ status: 'cancelled' }).eq('id', orderId);
-    if (error) {
-      toast.error('Failed to cancel order');
+    try {
+      const res = await fetch('/api/refunds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: orderId, type: 'cancellation', reason: 'Customer cancelled order' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to cancel order');
+      toast.success('Order cancellation request submitted');
+      setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' } : o)));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to cancel order');
+    }
+  };
+
+  const requestRefund = async () => {
+    if (!refundModal || !refundReason.trim()) {
+      toast.error('Please provide a reason for your refund request');
       return;
     }
-    toast.success('Order cancelled');
-    setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status: 'cancelled' } : o)));
+    setRefundLoading(true);
+    try {
+      const res = await fetch('/api/refunds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: refundModal.orderId, type: 'refund', reason: refundReason }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to submit refund request');
+      toast.success('Refund request submitted — you will be notified once it is processed');
+      setRefundModal(null);
+      setRefundReason('');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to submit refund request');
+    }
+    setRefundLoading(false);
   };
 
   if (!user && !authLoading) {
@@ -154,6 +189,11 @@ export default function OrdersPage() {
                           Cancel Order
                         </Button>
                       )}
+                      {['confirmed', 'processing', 'shipped', 'delivered'].includes(order.status) && (
+                        <Button size="sm" variant="outline" onClick={() => setRefundModal({ orderId: order.id, orderNumber: order.order_number })}>
+                          <RotateCcw className="mr-1 h-3.5 w-3.5" /> Request Refund
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -163,6 +203,39 @@ export default function OrdersPage() {
         )}
       </main>
       <Footer />
+
+      {/* Refund Request Modal */}
+      {refundModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="max-w-md w-full">
+            <CardContent className="p-6 space-y-4">
+              <h3 className="font-semibold text-lg">Request Refund</h3>
+              <p className="text-sm text-muted-foreground">
+                Request a refund for order <strong>{refundModal.orderNumber}</strong>. Please provide a reason for your request.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="refund_reason">Reason for Refund</Label>
+                <Textarea
+                  id="refund_reason"
+                  rows={4}
+                  placeholder="e.g. Product arrived damaged..."
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => { setRefundModal(null); setRefundReason(''); }}>
+                  Cancel
+                </Button>
+                <Button onClick={requestRefund} disabled={refundLoading || !refundReason.trim()}>
+                  {refundLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Submit Request
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </>
   );
 }

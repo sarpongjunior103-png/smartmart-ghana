@@ -259,12 +259,19 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
 
-    // If payment is successful, update order status
+    // If payment is successful, update order status and send email
     if (status === 'success' || status === 'completed') {
       await supabase
         .from('orders')
         .update({ status: 'confirmed' })
         .eq('id', data.order_id);
+
+      try {
+        const { sendOrderEmail } = await import('@/lib/email');
+        await sendOrderEmail(supabase, data.order_id, 'order_confirmation');
+      } catch (emailErr) {
+        console.error('Failed to send order confirmation email:', emailErr);
+      }
     }
 
     return NextResponse.json({ payment: data }, { headers: corsHeaders });

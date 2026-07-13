@@ -171,6 +171,14 @@ export async function POST(request: NextRequest) {
     // Clear cart
     await supabase.from('cart').delete().eq('user_id', user.id).eq('saved_for_later', false);
 
+    // Send order confirmation email
+    try {
+      const { sendOrderEmail } = await import('@/lib/email');
+      await sendOrderEmail(supabase, order.id, 'order_confirmation');
+    } catch (emailErr) {
+      console.error('Failed to send order confirmation email:', emailErr);
+    }
+
     return NextResponse.json({ order }, { status: 201, headers: corsHeaders });
   } catch (error) {
     console.error('Orders POST error:', error);

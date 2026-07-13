@@ -385,6 +385,75 @@ function vendorRejectionTemplate(data: { name: string; reason: string }): EmailT
   };
 }
 
+function orderCancelledTemplate(data: {
+  name: string;
+  orderId: string;
+  reason: string;
+}): EmailTemplate {
+  return {
+    subject: `Order #${data.orderId} Cancelled`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Order Cancelled</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; font-family: Arial, sans-serif;">Hi ${data.name},</p>
+      <p style="margin: 0 0 24px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Your order <strong>#${data.orderId}</strong> has been cancelled.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; background-color: #fff5f5; border-radius: 6px; border-left: 4px solid #ef4444;">
+        <tr>
+          <td style="padding: 16px 20px;">
+            <p style="margin: 0 0 4px 0; color: #6a6a8a; font-size: 12px; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Reason</p>
+            <p style="margin: 0; color: #1a1a2e; font-size: 15px; font-family: Arial, sans-serif;">${data.reason}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0; color: #4a4a6a; font-size: 14px; line-height: 1.6; font-family: Arial, sans-serif;">
+        If you have any questions about this cancellation, please contact our support team.
+      </p>
+    `),
+  };
+}
+
+function productApprovalTemplate(data: { name: string; productName: string }): EmailTemplate {
+  return {
+    subject: "Your Product Has Been Approved! ✅",
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Product Approved! 🎉</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; font-family: Arial, sans-serif;">Hi ${data.name},</p>
+      <p style="margin: 0 0 24px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Your product <strong>${data.productName}</strong> has been approved and is now live on SmartMart. Customers can start purchasing it immediately.
+      </p>
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="https://smartmart.com/seller/dashboard" style="display: inline-block; padding: 14px 36px; background-color: #4f46e5; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; font-family: Arial, sans-serif;">
+          Go to Seller Dashboard
+        </a>
+      </div>
+    `),
+  };
+}
+
+function productRejectionTemplate(data: { name: string; productName: string; reason: string }): EmailTemplate {
+  return {
+    subject: "Update on Your Product Submission",
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #1a1a2e; font-size: 22px; font-family: Arial, sans-serif;">Hi ${data.name},</h2>
+      <p style="margin: 0 0 16px 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        Your product <strong>${data.productName}</strong> was not approved for listing on SmartMart at this time.
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px; background-color: #fff5f5; border-radius: 6px; border-left: 4px solid #ef4444;">
+        <tr>
+          <td style="padding: 16px 20px;">
+            <p style="margin: 0 0 4px 0; color: #6a6a8a; font-size: 12px; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Reason</p>
+            <p style="margin: 0; color: #1a1a2e; font-size: 15px; font-family: Arial, sans-serif;">${data.reason}</p>
+          </td>
+        </tr>
+      </table>
+      <p style="margin: 0; color: #4a4a6a; font-size: 15px; line-height: 1.6; font-family: Arial, sans-serif;">
+        You can edit and resubmit your product after addressing the issues mentioned above.
+      </p>
+    `),
+  };
+}
+
 // ============================================================================
 // Template Registry
 // ============================================================================
@@ -396,9 +465,12 @@ const TEMPLATES: Record<string, (data: any) => EmailTemplate> = {
   order_confirmation: orderConfirmationTemplate,
   order_shipped: orderShippedTemplate,
   order_delivered: orderDeliveredTemplate,
+  order_cancelled: orderCancelledTemplate,
   refund_notification: refundNotificationTemplate,
   vendor_approval: vendorApprovalTemplate,
   vendor_rejection: vendorRejectionTemplate,
+  product_approval: productApprovalTemplate,
+  product_rejection: productRejectionTemplate,
 };
 
 // ============================================================================

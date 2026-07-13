@@ -103,7 +103,7 @@ async function updatePaymentStatus(
 
   // 3. Update orders table (confirm order if payment successful)
   if (status === "success") {
-    await supabaseRequest(
+    const orderResponse = await supabaseRequest(
       "orders?payment_reference=eq." + encodeURIComponent(reference),
       "PATCH",
       {
@@ -114,6 +114,40 @@ async function updatePaymentStatus(
       },
       env
     );
+
+    // Send order confirmation email
+    try {
+      const ordersData = await orderResponse.json();
+      const order = Array.isArray(ordersData) ? ordersData[0] : ordersData;
+      if (order && order.id) {
+        const profileRes = await supabaseRequest(
+          `profiles?id=eq.${order.user_id}&select=email,first_name,last_name`,
+          "GET",
+          null,
+          env
+        );
+        const profiles = await profileRes.json();
+        const profile = Array.isArray(profiles) ? profiles[0] : null;
+        if (profile?.email) {
+          const name = [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "Customer";
+          await fetch(`${env.SUPABASE_URL}/functions/v1/send-email`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+              apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+            },
+            body: JSON.stringify({
+              to: profile.email,
+              template: "order_confirmation",
+              data: { name, orderId: order.order_number, total: Number(order.total), currency: "GHS" },
+            }),
+          });
+        }
+      }
+    } catch (emailErr) {
+      console.error("Failed to send order confirmation email from webhook:", emailErr);
+    }
   } else if (status === "failed") {
     await supabaseRequest(
       "orders?payment_reference=eq." + encodeURIComponent(reference),

@@ -270,45 +270,92 @@ export default function CheckoutPage() {
 
             {/* Payment gateway */}
             <Card>
-              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Shield className="h-5 w-5" /> Payment Gateway</CardTitle></CardHeader>
-              <CardContent className="space-y-2">
-                {PAYMENT_GATEWAYS.map((g) => (
-                  <label key={g.id} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${form.paymentGateway === g.id ? 'border-primary bg-accent' : 'hover:bg-accent'}`}>
-                    <input type="radio" name="paymentGateway" value={g.id} checked={form.paymentGateway === g.id} onChange={(e) => { set('paymentGateway', e.target.value); if (g.supports.length > 0) set('paymentMethod', g.supports[0] as string); }} className="h-4 w-4 accent-primary" />
+              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Shield className="h-5 w-5" /> Payment Method</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {/* Mobile Money Section */}
+                <div>
+                  <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <span className="text-base">📱</span> Mobile Money
+                  </p>
+                  <div className="space-y-2">
+                    {PAYMENT_GATEWAYS.filter((g) => g.supports.includes('mtn_momo')).map((g) => (
+                      <div key={`momo-${g.id}`}>
+                        {PAYMENT_METHODS.filter((m) => ['mtn_momo', 'telecel_cash', 'airteltigo_money'].includes(m.id) && g.supports.includes(m.id)).map((m) => (
+                          <label key={`${g.id}-${m.id}`} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${form.paymentGateway === g.id && form.paymentMethod === m.id ? 'border-primary bg-accent' : 'hover:bg-accent'}`}>
+                            <input
+                              type="radio"
+                              name="paymentMethod"
+                              value={m.id}
+                              checked={form.paymentGateway === g.id && form.paymentMethod === m.id}
+                              onChange={() => { set('paymentGateway', g.id); set('paymentMethod', m.id); }}
+                              className="h-4 w-4 accent-primary"
+                            />
+                            <span className="text-xl">{m.icon}</span>
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">{m.label}</p>
+                              <p className="text-xs text-muted-foreground">{m.description} via {g.label}</p>
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Card Payment Section */}
+                <div className="pt-2 border-t">
+                  <p className="text-sm font-medium mb-2 flex items-center gap-2">
+                    <span className="text-base">💳</span> Card Payment
+                  </p>
+                  <div className="space-y-2">
+                    {PAYMENT_GATEWAYS.filter((g) => g.id !== 'cash_on_delivery').map((g) => (
+                      <label key={g.id} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${form.paymentGateway === g.id && !['mtn_momo', 'telecel_cash', 'airteltigo_money'].includes(form.paymentMethod) ? 'border-primary bg-accent' : 'hover:bg-accent'}`}>
+                        <input
+                          type="radio"
+                          name="paymentGateway"
+                          value={g.id}
+                          checked={form.paymentGateway === g.id && !['mtn_momo', 'telecel_cash', 'airteltigo_money'].includes(form.paymentMethod)}
+                          onChange={() => { set('paymentGateway', g.id); if (g.supports.length > 0) set('paymentMethod', g.supports[0] as string); }}
+                          className="h-4 w-4 accent-primary"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{g.label}</p>
+                          <p className="text-xs text-muted-foreground">{g.description}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cash on Delivery */}
+                <div className="pt-2 border-t">
+                  <label className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${form.paymentGateway === 'cash_on_delivery' ? 'border-primary bg-accent' : 'hover:bg-accent'}`}>
+                    <input
+                      type="radio"
+                      name="paymentGateway"
+                      value="cash_on_delivery"
+                      checked={form.paymentGateway === 'cash_on_delivery'}
+                      onChange={() => { set('paymentGateway', 'cash_on_delivery'); set('paymentMethod', 'cash_on_delivery'); }}
+                      className="h-4 w-4 accent-primary"
+                    />
+                    <span className="text-xl">🚚</span>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">{g.label}</p>
-                      <p className="text-xs text-muted-foreground">{g.description}</p>
+                      <p className="text-sm font-medium">Cash on Delivery</p>
+                      <p className="text-xs text-muted-foreground">Pay when you receive your order</p>
                     </div>
                   </label>
-                ))}
+                </div>
+
+                {/* MoMo phone number input */}
+                {['mtn_momo', 'telecel_cash', 'airteltigo_money'].includes(form.paymentMethod) && (
+                  <div className="mt-3 space-y-2 rounded-lg bg-accent/50 p-3">
+                    <Label htmlFor="paymentPhone">Mobile Money Number</Label>
+                    <Input id="paymentPhone" type="tel" placeholder="e.g. 024 123 4567" value={form.paymentPhone} onChange={(e) => set('paymentPhone', e.target.value)} required />
+                    <p className="text-xs text-muted-foreground">You will receive a prompt on this number to approve the payment.</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
-
-            {/* Payment method */}
-            {availablePaymentMethods.length > 0 && (
-              <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><CreditCard className="h-5 w-5" /> Payment Method</CardTitle></CardHeader>
-                <CardContent className="space-y-2">
-                  {PAYMENT_METHODS.filter((m) => availablePaymentMethods.includes(m.id)).map((m) => (
-                    <label key={m.id} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${form.paymentMethod === m.id ? 'border-primary bg-accent' : 'hover:bg-accent'}`}>
-                      <input type="radio" name="paymentMethod" value={m.id} checked={form.paymentMethod === m.id} onChange={(e) => set('paymentMethod', e.target.value)} className="h-4 w-4 accent-primary" />
-                      <span className="text-xl">{m.icon}</span>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{m.label}</p>
-                        <p className="text-xs text-muted-foreground">{m.description}</p>
-                      </div>
-                    </label>
-                  ))}
-
-                  {['mtn_momo', 'telecel_cash', 'airteltigo_money'].includes(form.paymentMethod) && (
-                    <div className="mt-3 space-y-2">
-                      <Label htmlFor="paymentPhone">Mobile Money Number</Label>
-                      <Input id="paymentPhone" type="tel" placeholder="+233 ..." value={form.paymentPhone} onChange={(e) => set('paymentPhone', e.target.value)} required />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
           </div>
 
           {/* Order summary */}

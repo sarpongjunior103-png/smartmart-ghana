@@ -36,7 +36,7 @@ export default function ProductFormPage() {
 
   const [form, setForm] = useState({
     name: '', brand: '', description: '', price: '', discountPrice: '',
-    stock: '', categoryId: '', isFeatured: false, status: 'draft' as 'draft' | 'published',
+    stock: '', categoryId: '', isFeatured: false, status: 'pending' as 'pending' | 'draft',
     sku: '', barcode: '', videoUrl: '', shippingWeight: '', warranty: '', deliveryTime: '',
   });
 
@@ -67,7 +67,7 @@ export default function ProductFormPage() {
           stock: p.stock?.toString() ?? '',
           categoryId: p.category_id ?? '',
           isFeatured: p.is_featured ?? false,
-          status: p.status ?? 'draft',
+          status: p.status ?? 'pending',
           sku: p.sku ?? '',
           barcode: p.barcode ?? '',
           videoUrl: p.video_url ?? '',
@@ -156,7 +156,7 @@ export default function ProductFormPage() {
       tags: tags.length > 0 ? tags : null,
       specifications: Object.keys(specifications).length > 0 ? specifications : null,
       is_featured: form.isFeatured,
-      status: saveAsDraft ? 'draft' : form.status,
+      status: saveAsDraft ? 'draft' : 'pending',
       sku: form.sku || null,
       barcode: form.barcode || null,
       video_url: form.videoUrl || null,
