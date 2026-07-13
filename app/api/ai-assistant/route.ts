@@ -32,7 +32,8 @@ type Intent =
 
 function detectIntent(message: string): Intent {
   const m = message.toLowerCase();
-  if (/track|my order|order status|where.*order|recent order|delivery status/.test(m)) return 'order_track';
+  // Order tracking: must be specific — "track my order", "track order", "where is my order"
+  if (/\btrack\b.*\border\b|\border\b.*\btrack\b|my order|order status|where.*my.*order|recent order|delivery status/.test(m)) return 'order_track';
   if (/compare|vs\.?|versus|difference between|which is better/.test(m)) return 'product_compare';
   if (/discount|on sale|deal|reduced|clearance|special offer|coupon|promo/.test(m)) return 'product_discount';
   if (/shipping|delivery.*fee|delivery.*cost|how long.*deliver|shipping rate|dispatch|courier/.test(m)) return 'shipping_info';
@@ -138,7 +139,7 @@ async function fetchProducts(supabase: any, message: string, opts: { limit?: num
   if (maxPrice !== undefined) query = query.lte('price', maxPrice);
   if (minPrice !== undefined) query = query.gte('price', minPrice);
   if (opts.featuredOnly) query = query.eq('is_featured', true);
-  if (opts.discountedOnly) query = query.not('discount_price', 'is', null).lt('discount_price', 'price');
+  if (opts.discountedOnly) query = query.not('discount_price', 'is', null).filter('discount_price', 'lt', 'price');
 
   // Category filter
   if (categoryKeywords.length > 0) {
@@ -177,11 +178,12 @@ async function fetchProductsForCompare(supabase: any, message: string) {
   const results: any[] = [];
 
   for (const brand of brands) {
+    // Search by brand column OR by name (since many products have null brand)
     const { data } = await supabase
       .from('products')
       .select('id, name, price, discount_price, image_url, rating, brand, stock, description, specifications')
       .eq('status', 'published')
-      .ilike('brand', `%${brand}%`)
+      .or(`brand.ilike.%${brand}%,name.ilike.%${brand}%`)
       .order('rating', { ascending: false })
       .limit(2);
     if (data) results.push(...data);
