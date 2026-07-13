@@ -12,7 +12,7 @@ const corsHeaders = {
 // Contact info
 const CONTACT_PHONE = "+233 55 162 1261";
 const CONTACT_PHONE_RAW = "+233551621261";
-const CONTACT_EMAIL = "smartmart304@gmail.com";
+const CONTACT_EMAIL = "smrtmart304@gmail.com";
 
 // ============================================================================
 // Helpers

@@ -326,6 +326,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 For questions, support, or inquiries about SmartMart:
 
 - **Phone:** +233 55 162 1261
-- **Email:** smartmart304@gmail.com
+- **Email:** smrtmart304@gmail.com
 
 We're committed to providing a secure, reliable, and user-friendly marketplace experience. Don't hesitate to reach out!

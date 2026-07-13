@@ -76,7 +76,7 @@ Before deploying, ensure you have the following:
 | `NEXT_PUBLIC_CLOUDINARY_API_KEY` | Cloudinary API key | `123456789012345` |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret | `your-secret` |
 | `RESEND_API_KEY` | Resend API key | `re_xxxxxxxx` |
-| `EMAIL_FROM` | Sender email address | `smartmart304@gmail.com` |
+| `EMAIL_FROM` | Sender email address | `smrtmart304@gmail.com` |
 | `PAYSTACK_SECRET_KEY` | Paystack secret key | `sk_live_xxxxxxxx` |
 | `PAYSTACK_PUBLIC_KEY` | Paystack public key | `pk_live_xxxxxxxx` |
 | `STRIPE_SECRET_KEY` | Stripe secret key | `sk_live_xxxxxxxx` |
@@ -168,7 +168,7 @@ supabase secrets set \
   HUBTEL_CLIENT_SECRET=your-client-secret \
   HUBTEL_WEBHOOK_SECRET=your-webhook-secret \
   RESEND_API_KEY=re_xxxxxxxx \
-  EMAIL_FROM=smartmart304@gmail.com \
+  EMAIL_FROM=smrtmart304@gmail.com \
   --project-ref your-project-ref
 ```
 
@@ -253,7 +253,7 @@ SmartMart uses [Resend](https://resend.com) for transactional emails.
 
 1. Create a Resend account and get your API key.
 2. Set `RESEND_API_KEY` in your Supabase Edge Function secrets.
-3. Set `EMAIL_FROM` to `smartmart304@gmail.com`.
+3. Set `EMAIL_FROM` to `smrtmart304@gmail.com`.
 4. Verify your sending domain in Resend (if using a custom domain).
 
 ### Email Templates
@@ -274,7 +274,7 @@ The `send-email` edge function supports 9 branded templates:
 
 All emails include the SmartMart contact information in the footer:
 - **Phone:** +233 55 162 1261
-- **Email:** smartmart304@gmail.com
+- **Email:** smrtmart304@gmail.com
 
 ---
 
@@ -413,7 +413,7 @@ supabase functions deploy function-name --project-ref your-project-ref
 
 **Emails not sending**
 - Verify `RESEND_API_KEY` is set in Edge Function secrets.
-- Check that `EMAIL_FROM` is set to `smartmart304@gmail.com`.
+- Check that `EMAIL_FROM` is set to `smrtmart304@gmail.com`.
 - Review the Resend dashboard for delivery failures.
 
 **Database connection errors**
@@ -433,6 +433,6 @@ supabase functions deploy function-name --project-ref your-project-ref
 If you encounter issues during deployment, please contact our support team:
 
 - **Phone:** +233 55 162 1261
-- **Email:** smartmart304@gmail.com
+- **Email:** smrtmart304@gmail.com
 
 Our team is available to assist with deployment, configuration, and troubleshooting.

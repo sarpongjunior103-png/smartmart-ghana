@@ -1,7 +1,7 @@
 export const CONTACT = {
   phone: '+233 55 162 1261',
   phoneRaw: '+233551621261',
-  email: 'smartmart304@gmail.com',
+  email: 'smrtmart304@gmail.com',
   address: 'Accra, Ghana',
   website: 'https://smartmartghana.com',
   social: {

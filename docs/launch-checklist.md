@@ -39,7 +39,7 @@ This checklist ensures SmartMart is fully ready for production launch. Complete 
   - [ ] `NEXT_PUBLIC_CLOUDINARY_API_KEY`
   - [ ] `CLOUDINARY_API_SECRET`
   - [ ] `RESEND_API_KEY`
-  - [ ] `EMAIL_FROM` set to `smartmart304@gmail.com`
+  - [ ] `EMAIL_FROM` set to `smrtmart304@gmail.com`
   - [ ] `PAYSTACK_SECRET_KEY`
   - [ ] `PAYSTACK_PUBLIC_KEY`
   - [ ] `STRIPE_SECRET_KEY`
@@ -134,7 +134,7 @@ This checklist ensures SmartMart is fully ready for production launch. Complete 
 ## 5. Email Service
 
 - [ ] Resend API key configured in Edge Function secrets
-- [ ] `EMAIL_FROM` set to `smartmart304@gmail.com`
+- [ ] `EMAIL_FROM` set to `smrtmart304@gmail.com`
 - [ ] Sending domain verified in Resend (if custom domain)
 - [ ] Test all 9 email templates:
   - [ ] `welcome` — sent on new user registration
@@ -148,7 +148,7 @@ This checklist ensures SmartMart is fully ready for production launch. Complete 
   - [ ] `vendor_rejection` — sent on vendor rejection
 - [ ] All emails include contact info in footer:
   - [ ] Phone: +233 55 162 1261
-  - [ ] Email: smartmart304@gmail.com
+  - [ ] Email: smrtmart304@gmail.com
 - [ ] Email delivery confirmed (check spam folder)
 - [ ] Email rendering verified on mobile and desktop
 
@@ -223,7 +223,7 @@ This checklist ensures SmartMart is fully ready for production launch. Complete 
 - [ ] Pagination working
 - [ ] Website schema (structured data) valid
 - [ ] Organization schema includes correct contact info:
-  - [ ] Email: smartmart304@gmail.com
+  - [ ] Email: smrtmart304@gmail.com
   - [ ] Phone: +233551621261
 - [ ] Product schema valid
 - [ ] Breadcrumb schema valid
@@ -294,7 +294,7 @@ This checklist ensures SmartMart is fully ready for production launch. Complete 
 - [ ] Launch checklist complete (this document)
 - [ ] All documentation includes correct contact info:
   - [ ] Phone: +233 55 162 1261
-  - [ ] Email: smartmart304@gmail.com
+  - [ ] Email: smrtmart304@gmail.com
 - [ ] Environment setup instructions clear
 - [ ] Troubleshooting guide available
 
@@ -346,6 +346,6 @@ This checklist ensures SmartMart is fully ready for production launch. Complete 
 If you encounter any issues during the launch process, please contact our support team:
 
 - **Phone:** +233 55 162 1261
-- **Email:** smartmart304@gmail.com
+- **Email:** smrtmart304@gmail.com
 
 We're here to ensure a smooth and successful launch.

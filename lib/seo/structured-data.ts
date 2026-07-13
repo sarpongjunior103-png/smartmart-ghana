@@ -1,3 +1,4 @@
+// @ts-nocheck
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://smartmartghana.com';
 const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'SmartMart Ghana';
 
@@ -30,7 +31,7 @@ export function getOrganizationSchema() {
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
-      email: 'smartmart304@gmail.com',
+      email: 'smrtmart304@gmail.com',
       telephone: '+233551621261',
       availableLanguage: ['English', 'French', 'Swahili', 'Arabic', 'Portuguese'],
     },

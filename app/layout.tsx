@@ -1,6 +1,9 @@
 import './globals.css';
 import { Footer } from '@/components/Footer';
-import { CONTACT } from '@/lib/contact';
+import { Navbar } from '@/components/Navbar';
+import { AuthProvider } from '@/lib/auth-context';
+import { CartProvider } from '@/lib/cart-context';
+import { LocaleProvider } from '@/lib/locale-context';
 
 export const metadata = {
   title: 'SmartMart Ghana — Multi-Vendor Marketplace',
@@ -15,8 +18,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
-        <Footer />
+        <AuthProvider>
+          <LocaleProvider>
+            <CartProvider>
+              <Navbar />
+              <main>{children}</main>
+              <Footer />
+            </CartProvider>
+          </LocaleProvider>
+        </AuthProvider>
       </body>
     </html>
   );

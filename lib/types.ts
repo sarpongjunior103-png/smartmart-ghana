@@ -303,3 +303,13 @@ export type PlatformSetting = {
   created_at: string;
   updated_at: string;
 };
+
+export type PaymentGateway = {
+  id: string;
+  name: string;
+  provider: string;
+  is_active: boolean;
+  config: Record<string, string>;
+  created_at: string;
+  updated_at: string;
+};

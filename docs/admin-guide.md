@@ -72,7 +72,7 @@ The admin settings page has **6 tabs**:
 | Setting | Description |
 |---|---|
 | Store Name | Public name displayed across the site |
-| Store Email | Primary contact email (`smartmart304@gmail.com`) |
+| Store Email | Primary contact email (`smrtmart304@gmail.com`) |
 | Store Phone | Primary contact phone (`+233 55 162 1261`) |
 | Store Address | Physical store address |
 | Country | Operating country (affects currency and shipping) |
@@ -397,6 +397,6 @@ The `activity_logs` table tracks all significant actions in the system.
 If you need assistance with admin operations, please contact our support team:
 
 - **Phone:** +233 55 162 1261
-- **Email:** smartmart304@gmail.com
+- **Email:** smrtmart304@gmail.com
 
 Our team is available to help with admin access, configuration, and any issues you encounter while managing the platform.

@@ -332,11 +332,11 @@ Sends branded transactional emails via the Resend API.
 | Variable | Description |
 |---|---|
 | `RESEND_API_KEY` | Resend API key |
-| `EMAIL_FROM` | Sender email (`smartmart304@gmail.com`) |
+| `EMAIL_FROM` | Sender email (`smrtmart304@gmail.com`) |
 
 All emails include the SmartMart contact information in the footer:
 - **Phone:** +233 55 162 1261
-- **Email:** smartmart304@gmail.com
+- **Email:** smrtmart304@gmail.com
 
 #### Status Codes
 
@@ -651,6 +651,6 @@ Webhook endpoints return appropriate status codes to signal retry behavior:
 For API-related questions, integration support, or to report issues:
 
 - **Phone:** +233 55 162 1261
-- **Email:** smartmart304@gmail.com
+- **Email:** smrtmart304@gmail.com
 
 Our team can assist with API integration, webhook configuration, authentication setup, and troubleshooting.

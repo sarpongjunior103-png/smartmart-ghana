@@ -357,7 +357,7 @@ Your account dashboard provides a complete view of your SmartMart activity:
 
 - Check the sender's email address.
 - Don't click suspicious links — go directly to smartmart.com.
-- SmartMart emails come from **smartmart304@gmail.com**.
+- SmartMart emails come from **smrtmart304@gmail.com**.
 - If in doubt, contact us directly using the details below.
 
 ### Safe Shopping Tips
@@ -382,7 +382,7 @@ Your account dashboard provides a complete view of your SmartMart activity:
 If you need help with anything — placing an order, tracking a delivery, returns, or account issues — our support team is here for you:
 
 - **Phone:** +233 55 162 1261
-- **Email:** smartmart304@gmail.com
+- **Email:** smrtmart304@gmail.com
 
 You can also:
 - Use the **live chat** to message vendors about product questions

@@ -59,7 +59,7 @@ SmartMart is a multi-vendor marketplace where independent sellers can list produ
 - If approved, you'll get access to the **Vendor Dashboard**.
 - If rejected, the email will include the reason and guidance on how to reapply.
 
-> **Need help with your application?** Contact us at **+233 55 162 1261** or **smartmart304@gmail.com**.
+> **Need help with your application?** Contact us at **+233 55 162 1261** or **smrtmart304@gmail.com**.
 
 ---
 
@@ -364,6 +364,6 @@ If a customer opens a dispute:
 If you need help with your vendor account, store setup, or any issues, our support team is here to help:
 
 - **Phone:** +233 55 162 1261
-- **Email:** smartmart304@gmail.com
+- **Email:** smrtmart304@gmail.com
 
 We're committed to helping our vendors succeed. Don't hesitate to reach out with questions about products, orders, payouts, or platform features.

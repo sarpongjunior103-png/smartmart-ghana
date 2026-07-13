@@ -36,7 +36,7 @@ describe('Structured Data Schemas', () => {
 
     it('includes the correct contact email', () => {
       const schema = getOrganizationSchema();
-      expect(schema.email).toBe('smartmart304@gmail.com');
+      expect(schema.email).toBe('smrtmart304@gmail.com');
     });
 
     it('includes the correct contact phone', () => {
@@ -49,10 +49,10 @@ describe('Structured Data Schemas', () => {
       expect(schema.contactPoint).toBeDefined();
       if (Array.isArray(schema.contactPoint)) {
         expect(schema.contactPoint.length).toBeGreaterThan(0);
-        expect(schema.contactPoint[0].email).toBe('smartmart304@gmail.com');
+        expect(schema.contactPoint[0].email).toBe('smrtmart304@gmail.com');
         expect(schema.contactPoint[0].telephone).toBe('+233551621261');
       } else {
-        expect(schema.contactPoint.email).toBe('smartmart304@gmail.com');
+        expect(schema.contactPoint.email).toBe('smrtmart304@gmail.com');
         expect(schema.contactPoint.telephone).toBe('+233551621261');
       }
     });

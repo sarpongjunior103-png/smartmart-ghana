@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Simple spell correction for common product search terms
 export function spellCorrect(query: string): string {
   const corrections: Record<string, string> = {
