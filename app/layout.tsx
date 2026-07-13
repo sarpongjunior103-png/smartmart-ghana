@@ -4,6 +4,7 @@ import { Navbar } from '@/components/Navbar';
 import { AuthProvider } from '@/lib/auth-context';
 import { CartProvider } from '@/lib/cart-context';
 import { LocaleProvider } from '@/lib/locale-context';
+import { AIAssistant } from '@/components/shared/ai-assistant';
 
 export const metadata = {
   title: 'SmartMart Ghana — Multi-Vendor Marketplace',
@@ -24,6 +25,7 @@ export default function RootLayout({
               <Navbar />
               <main>{children}</main>
               <Footer />
+              <AIAssistant />
             </CartProvider>
           </LocaleProvider>
         </AuthProvider>
