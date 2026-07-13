@@ -14,7 +14,7 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
@@ -23,12 +23,10 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await supabase
       .from('vendors')
       .select(
-        `id, business_name, slug, logo_url, description, rating, total_sales,
-         is_active, is_verified, created_at,
-         profiles(id, full_name, email, avatar_url)`,
+        `id, business_name, slug, logo_url, banner_url, description, rating, status, city, business_category, created_at`,
         { count: 'exact' }
       )
-      .eq('is_active', true)
+      .eq('status', 'approved')
       .order('rating', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -57,7 +55,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
     const {
@@ -69,11 +67,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    // Check if already a vendor
+    // Check if already a vendor (vendors.id = user.id)
     const { data: existingVendor } = await supabase
       .from('vendors')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('id', user.id)
       .maybeSingle();
 
     if (existingVendor) {
@@ -83,7 +81,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { business_name, slug, logo_url, description, business_email, phone, address } = body;
+    const { business_name, slug, logo_url, description, business_email, phone, business_address, business_category, city } = body;
 
     if (!business_name) {
       return NextResponse.json(
@@ -95,18 +93,18 @@ export async function POST(request: NextRequest) {
     const { data: vendor, error } = await supabase
       .from('vendors')
       .insert({
-        user_id: user.id,
+        id: user.id,
         business_name,
         slug: slug || business_name.toLowerCase().replace(/\s+/g, '-'),
         logo_url,
         description,
         business_email: business_email || user.email,
         phone,
-        address,
-        is_active: false,
-        is_verified: false,
+        business_address,
+        business_category,
+        city,
+        status: 'pending',
         rating: 0,
-        total_sales: 0,
       })
       .select()
       .single();
@@ -131,7 +129,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
     const {
@@ -143,12 +141,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    // Get vendor record for this user
+    // Get vendor record for this user (vendors.id = user.id)
     const { data: vendor, error: vendorError } = await supabase
       .from('vendors')
       .select('id')
-      .eq('user_id', user.id)
-      .single();
+      .eq('id', user.id)
+      .maybeSingle();
 
     if (vendorError || !vendor) {
       return NextResponse.json(
@@ -157,7 +155,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { business_name, slug, logo_url, description, business_email, phone, address } = body;
+    const { business_name, slug, logo_url, banner_url, description, business_email, phone, business_address, city } = body;
 
     const { data: updated, error } = await supabase
       .from('vendors')
@@ -165,10 +163,12 @@ export async function PUT(request: NextRequest) {
         business_name,
         slug,
         logo_url,
+        banner_url,
         description,
         business_email,
         phone,
-        address,
+        business_address,
+        city,
       })
       .eq('id', vendor.id)
       .select()

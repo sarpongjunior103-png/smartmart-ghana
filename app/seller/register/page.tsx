@@ -32,10 +32,11 @@ export default function SellerRegisterPage() {
 
   const set = (k: string, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
 
-  const uploadFile = async (file: File, path: string): Promise<string | null> => {
-    const { data, error } = await supabase.storage.from('vendor-assets').upload(path, file);
+  const uploadFile = async (file: File, bucket: 'seller-logos' | 'verification-documents', path: string): Promise<string | null> => {
+    const { data, error } = await supabase.storage.from(bucket).upload(path, file);
     if (error) return null;
-    return data.path;
+    const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path);
+    return urlData.publicUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,14 +54,14 @@ export default function SellerRegisterPage() {
     let logoUrl: string | null = null;
     let idUrl: string | null = null;
     if (logoFile) {
-      logoUrl = await uploadFile(logoFile, `logos/${Date.now()}-${logoFile.name}`);
+      logoUrl = await uploadFile(logoFile, 'seller-logos', `logos/${Date.now()}-${logoFile.name}`);
     }
     if (idFile) {
-      idUrl = await uploadFile(idFile, `ids/${Date.now()}-${idFile.name}`);
+      idUrl = await uploadFile(idFile, 'verification-documents', `ids/${Date.now()}-${idFile.name}`);
     }
 
     const fullName = `${form.firstName} ${form.lastName}`.trim();
-    const { error } = await signUp(form.businessEmail, form.password, {
+    const { data: authData, error } = await signUp(form.businessEmail, form.password, {
       role: 'vendor',
       first_name: form.firstName,
       last_name: form.lastName,
@@ -68,22 +69,47 @@ export default function SellerRegisterPage() {
       phone: form.phone,
       country: form.country,
       city: form.city,
-      business_name: form.businessName,
-      business_email: form.businessEmail,
-      business_address: form.businessAddress,
-      business_category: form.businessCategory,
-      tax_number: form.taxNumber,
-      logo_url: logoUrl,
-      id_url: idUrl,
     });
 
-    setLoading(false);
     if (error) {
+      setLoading(false);
       toast.error(error);
       return;
     }
-    setSubmitted(true);
-    toast.success('Application submitted successfully!');
+
+    // Insert vendor record using the new user's id
+    if (authData?.user?.id) {
+      const slug = form.businessName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const { error: vendorError } = await supabase.from('vendors').insert({
+        id: authData.user.id,
+        business_name: form.businessName,
+        owner_name: fullName,
+        business_email: form.businessEmail,
+        phone: form.phone,
+        country: form.country,
+        city: form.city,
+        business_address: form.businessAddress,
+        business_category: form.businessCategory,
+        tax_number: form.taxNumber,
+        logo_url: logoUrl,
+        id_url: idUrl,
+        status: 'pending',
+        slug,
+        rating: 0,
+      });
+
+      if (vendorError) {
+        console.error('Vendor insert error:', vendorError);
+        toast.error('Account created but vendor profile failed. Please contact support.');
+      } else {
+        setSubmitted(true);
+        toast.success('Application submitted successfully!');
+      }
+    } else {
+      setSubmitted(true);
+      toast.success('Application submitted successfully!');
+    }
+    setLoading(false);
   };
 
   if (submitted) {

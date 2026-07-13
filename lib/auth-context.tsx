@@ -12,7 +12,7 @@ interface AuthContextValue {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, metadata: Record<string, unknown>) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, metadata: Record<string, unknown>) => Promise<{ data: { user: { id: string } | null } | null; error: string | null }>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -69,12 +69,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp = async (email: string, password: string, metadata: Record<string, unknown>) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: metadata },
     });
-    return { error: error?.message ?? null };
+    return { data: data as { user: { id: string } | null } | null, error: error?.message ?? null };
   };
 
   const signInWithGoogle = async () => {

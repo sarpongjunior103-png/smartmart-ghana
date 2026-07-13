@@ -14,7 +14,7 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
 
     const {
       data: { user },
@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase
       .from('orders')
       .select(
-        `id, order_number, status, total, subtotal, shipping_cost, tax, created_at,
-         order_items(id, product_id, quantity, unit_price, products(id, name, images))`
+        `id, order_number, status, total, subtotal, shipping_fee, discount_amount, payment_method, delivery_method, created_at, estimated_delivery_date, tracking_number, delivery_status,
+         order_items(id, product_id, product_name, product_image, price, quantity, vendor_id)`
       )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
     const {
@@ -60,13 +60,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    const { shipping_address_id, coupon_code } = body;
+    const { shipping_address, delivery_method, payment_method, coupon_code } = body;
 
     // Fetch cart items
     const { data: cartItems, error: cartError } = await supabase
-      .from('cart_items')
-      .select(`id, quantity, products(id, name, price, stock, vendor_id)`)
-      .eq('user_id', user.id);
+      .from('cart')
+      .select(`id, quantity, products(id, name, price, discount_price, stock, vendor_id, image_url)`)
+      .eq('user_id', user.id)
+      .eq('saved_for_later', false);
 
     if (cartError) throw cartError;
 
@@ -77,12 +78,16 @@ export async function POST(request: NextRequest) {
     // Calculate totals
     let subtotal = 0;
     const orderItems = cartItems.map((item: any) => {
-      const unitPrice = item.products.price;
-      subtotal += unitPrice * item.quantity;
+      const price = item.products?.discount_price && item.products.discount_price < item.products.price
+        ? item.products.discount_price
+        : item.products?.price ?? 0;
+      subtotal += price * item.quantity;
       return {
         product_id: item.products.id,
+        product_name: item.products.name,
+        product_image: item.products.image_url,
+        price,
         quantity: item.quantity,
-        unit_price: unitPrice,
         vendor_id: item.products.vendor_id,
       };
     });
@@ -92,15 +97,21 @@ export async function POST(request: NextRequest) {
     if (coupon_code) {
       const { data: coupon } = await supabase
         .from('coupons')
-        .select('id, discount_type, discount_value, min_order')
+        .select('id, discount_type, discount_value, min_order_amount, max_uses, used_count, active, expires_at')
         .eq('code', coupon_code)
-        .eq('is_active', true)
-        .single();
+        .eq('active', true)
+        .maybeSingle();
 
       if (coupon) {
-        if (coupon.min_order && subtotal < coupon.min_order) {
+        if (coupon.min_order_amount && subtotal < coupon.min_order_amount) {
           return NextResponse.json(
-            { error: `Minimum order of ${coupon.min_order} required for this coupon` },
+            { error: `Minimum order of ${coupon.min_order_amount} required for this coupon` },
+            { status: 400, headers: corsHeaders }
+          );
+        }
+        if (coupon.max_uses && coupon.used_count >= coupon.max_uses) {
+          return NextResponse.json(
+            { error: 'Coupon usage limit reached' },
             { status: 400, headers: corsHeaders }
           );
         }
@@ -111,12 +122,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const shippingCost = subtotal > 100 ? 0 : 10;
-    const tax = (subtotal - discount) * 0.075;
-    const total = subtotal - discount + shippingCost + tax;
+    const shippingFee = subtotal > 100 ? 0 : 10;
+    const total = subtotal - discount + shippingFee;
 
     // Create order
-    const orderNumber = `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const orderNumber = `SMG-${Date.now().toString(36).toUpperCase()}`;
+    const deliveryDays = delivery_method === 'express' ? 2 : delivery_method === 'pickup' ? 1 : 5;
+    const estimatedDate = new Date();
+    estimatedDate.setDate(estimatedDate.getDate() + deliveryDays);
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -125,12 +138,15 @@ export async function POST(request: NextRequest) {
         order_number: orderNumber,
         status: 'pending',
         subtotal,
-        discount,
-        shipping_cost: shippingCost,
-        tax,
+        discount_amount: discount,
+        shipping_fee: shippingFee,
         total,
-        shipping_address_id: shipping_address_id,
+        payment_method,
+        delivery_method,
         coupon_code,
+        shipping_address,
+        estimated_delivery_date: estimatedDate.toISOString().split('T')[0],
+        delivery_status: 'order_received',
       })
       .select()
       .single();
@@ -143,13 +159,17 @@ export async function POST(request: NextRequest) {
 
     if (itemsError) throw itemsError;
 
-    // Clear cart
-    const { error: clearError } = await supabase
-      .from('cart_items')
-      .delete()
-      .eq('user_id', user.id);
+    // Record payment
+    await supabase.from('payments').insert({
+      order_id: order.id,
+      provider: payment_method,
+      amount: total,
+      currency: 'GHS',
+      status: 'pending',
+    });
 
-    if (clearError) throw clearError;
+    // Clear cart
+    await supabase.from('cart').delete().eq('user_id', user.id).eq('saved_for_later', false);
 
     return NextResponse.json({ order }, { status: 201, headers: corsHeaders });
   } catch (error) {

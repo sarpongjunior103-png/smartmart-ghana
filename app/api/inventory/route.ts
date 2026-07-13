@@ -14,7 +14,7 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('product_id');
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -32,9 +32,8 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await supabase
       .from('inventory_logs')
       .select(
-        `id, product_id, change_type, quantity_change, previous_stock, new_stock,
-         reason, created_at,
-         profiles(id, full_name)`,
+        `id, product_id, change_type, quantity_change, previous_stock, new_stock, reason, created_at,
+         vendors(id, business_name)`,
         { count: 'exact' }
       )
       .eq('product_id', productId)
@@ -47,8 +46,7 @@ export async function GET(request: NextRequest) {
       {
         logs: data,
         pagination: {
-          page,
-          limit,
+          page, limit,
           total: count || 0,
           totalPages: Math.ceil((count || 0) / limit),
         },
@@ -66,7 +64,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
     const {
@@ -78,12 +76,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    // Check if vendor
+    // Check if vendor (vendors.id = user.id)
     const { data: vendor, error: vendorError } = await supabase
       .from('vendors')
       .select('id')
-      .eq('user_id', user.id)
-      .single();
+      .eq('id', user.id)
+      .maybeSingle();
 
     if (vendorError || !vendor) {
       return NextResponse.json(
@@ -145,7 +143,7 @@ export async function POST(request: NextRequest) {
       .from('inventory_logs')
       .insert({
         product_id,
-        user_id: user.id,
+        vendor_id: vendor.id,
         change_type: change_type || 'increase',
         quantity_change: change_type === 'decrease' ? -Math.abs(quantity_change) : Math.abs(quantity_change),
         previous_stock: previousStock,

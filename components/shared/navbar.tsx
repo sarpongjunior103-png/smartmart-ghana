@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Menu, X, ShoppingCart, Bell, User, ChevronDown, LogOut, Store, Search, Gift, Award } from 'lucide-react';
+import { Menu, X, ShoppingCart, Bell, User, ChevronDown, LogOut, Store, Search, Gift, Award, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
+  { href: '/products', label: 'Products' },
   { href: '/categories', label: 'Categories' },
   { href: '/seller/register', label: 'Become a Seller' },
   { href: '/about', label: 'About' },
@@ -166,6 +167,11 @@ export function Navbar() {
               <Bell className="h-5 w-5" />
               <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-secondary" />
             </Button>
+            <Button variant="ghost" size="icon" className="relative" aria-label="Wishlist" asChild>
+              <Link href="/wishlist">
+                <Heart className="h-5 w-5" />
+              </Link>
+            </Button>
             <Button variant="ghost" size="icon" className="relative" aria-label="Shopping cart" asChild>
               <Link href="/cart">
                 <ShoppingCart className="h-5 w-5" />
@@ -280,6 +286,9 @@ export function Navbar() {
                 <>
                   <Link href="/dashboard" className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm hover:bg-accent">
                     <User className="h-4 w-4" /> My Dashboard
+                  </Link>
+                  <Link href="/wishlist" className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm hover:bg-accent">
+                    <Heart className="h-4 w-4" /> Wishlist
                   </Link>
                   <Link href="/referral" className="flex items-center gap-2 rounded-md px-3 py-2.5 text-sm hover:bg-accent">
                     <Gift className="h-4 w-4" /> Referral Program

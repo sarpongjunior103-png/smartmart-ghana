@@ -14,12 +14,11 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
 
     const { data, error } = await supabase
       .from('categories')
-      .select('id, name, slug, description, image_url, parent_id, is_active, created_at')
-      .eq('is_active', true)
+      .select('id, name, slug, icon, image_url, created_at')
       .order('name', { ascending: true });
 
     if (error) throw error;
@@ -36,10 +35,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
-    // Get current user
     const {
       data: { user },
       error: authError,
@@ -49,7 +47,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    // Check if user is admin
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -63,7 +60,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, slug, description, image_url, parent_id } = body;
+    const { name, slug, icon, image_url } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -77,10 +74,8 @@ export async function POST(request: NextRequest) {
       .insert({
         name,
         slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
-        description,
+        icon,
         image_url,
-        parent_id,
-        is_active: true,
       })
       .select()
       .single();

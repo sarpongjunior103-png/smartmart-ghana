@@ -37,24 +37,32 @@ function ProcessingContent() {
       setStatus('verifying');
 
       try {
-        const res = await fetch('/api/payments', {
-          method: 'PATCH',
+        // Look up payment by reference and check status
+        const res = await fetch(`/api/payments?order_id=${encodeURIComponent(reference)}`, {
+          method: 'GET',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reference, gateway }),
         });
         const data = await res.json();
 
         if (cancelled) return;
 
-        if (data.success) {
+        const payments = data.payments ?? [];
+        const payment = payments.find((p: any) => p.reference === reference);
+
+        if (payment?.status === 'success' || payment?.status === 'completed') {
           router.push(`/payment/success?order=${orderNumber}&reference=${reference}`);
-        } else if (data.status === 'pending' && attempt < 5) {
+        } else if (payment?.status === 'failed') {
+          router.push(`/payment/failure?order=${orderNumber}&reference=${reference}`);
+        } else if (attempt < 5) {
           setAttempts(attempt + 1);
           setTimeout(() => verify(attempt + 1), 3000);
-        } else if (data.status === 'success') {
-          router.push(`/payment/success?order=${orderNumber}&reference=${reference}`);
         } else {
-          router.push(`/payment/failure?order=${orderNumber}&reference=${reference}`);
+          // After max retries, assume pending and redirect to success for COD, failure otherwise
+          if (method === 'cash_on_delivery') {
+            router.push(`/payment/success?order=${orderNumber}`);
+          } else {
+            router.push(`/payment/failure?order=${orderNumber}&reference=${reference}`);
+          }
         }
       } catch {
         if (!cancelled && attempt < 5) {

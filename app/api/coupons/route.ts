@@ -14,7 +14,7 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
 
     const {
       data: { user },
@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    // Check if admin
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -36,10 +35,10 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('coupons')
-      .select('id, code, description, discount_type, discount_value, min_order, max_discount, usage_limit, used_count, is_active, valid_from, valid_until, created_at');
+      .select('id, code, description, discount_type, discount_value, min_order_amount, max_uses, used_count, active, expires_at, created_at');
 
     if (!isAdmin) {
-      query = query.eq('is_active', true).lte('valid_from', new Date().toISOString()).gte('valid_until', new Date().toISOString());
+      query = query.eq('active', true).gte('expires_at', new Date().toISOString());
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
@@ -58,7 +57,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
     const {
@@ -70,7 +69,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    // Check if admin
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -84,7 +82,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { code, description, discount_type, discount_value, min_order, max_discount, usage_limit, valid_from, valid_until } = body;
+    const { code, description, discount_type, discount_value, min_order_amount, max_uses, expires_at } = body;
 
     if (!code || !discount_type || discount_value === undefined) {
       return NextResponse.json(
@@ -100,13 +98,11 @@ export async function POST(request: NextRequest) {
         description,
         discount_type,
         discount_value,
-        min_order,
-        max_discount,
-        usage_limit,
-        valid_from: valid_from || new Date().toISOString(),
-        valid_until,
-        is_active: true,
+        min_order_amount,
+        max_uses,
+        active: true,
         used_count: 0,
+        expires_at,
       })
       .select()
       .single();
@@ -125,7 +121,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
     const {
@@ -137,7 +133,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    // Check if admin
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')
@@ -178,7 +173,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const { searchParams } = new URL(request.url);
     const couponId = searchParams.get('id');
 
@@ -191,7 +186,6 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    // Check if admin
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('role')

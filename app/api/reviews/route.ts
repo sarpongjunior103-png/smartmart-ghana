@@ -14,7 +14,7 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('product_id');
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await supabase
       .from('reviews')
       .select(
-        `id, rating, title, comment, created_at,
-         profiles(id, full_name, avatar_url)`,
+        `id, rating, comment, created_at,
+         profiles(id, first_name, last_name, avatar_url)`,
         { count: 'exact' }
       )
       .eq('product_id', productId)
@@ -46,8 +46,7 @@ export async function GET(request: NextRequest) {
       {
         reviews: data,
         pagination: {
-          page,
-          limit,
+          page, limit,
           total: count || 0,
           totalPages: Math.ceil((count || 0) / limit),
         },
@@ -65,7 +64,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
     const {
@@ -77,7 +76,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    const { product_id, rating, title, comment } = body;
+    const { product_id, rating, comment } = body;
 
     if (!product_id || !rating) {
       return NextResponse.json(
@@ -94,24 +93,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user has purchased the product
-    const { data: orderItem, error: orderError } = await supabase
-      .from('order_items')
+    const { data: orders } = await supabase
+      .from('orders')
       .select('id')
-      .eq('product_id', product_id)
-      .in(
-        'order_id',
-        supabase.from('orders').select('id').eq('user_id', user.id).in('status', ['delivered', 'completed'])
-      )
-      .limit(1)
-      .maybeSingle();
+      .eq('user_id', user.id)
+      .in('status', ['delivered', 'completed']);
 
-    if (orderError) throw orderError;
+    if (orders && orders.length > 0) {
+      const orderIds = orders.map((o: any) => o.id);
+      const { data: orderItem } = await supabase
+        .from('order_items')
+        .select('id')
+        .eq('product_id', product_id)
+        .in('order_id', orderIds)
+        .maybeSingle();
 
-    if (!orderItem) {
-      return NextResponse.json(
-        { error: 'You can only review products you have purchased' },
-        { status: 403, headers: corsHeaders }
-      );
+      if (!orderItem) {
+        return NextResponse.json(
+          { error: 'You can only review products you have purchased' },
+          { status: 403, headers: corsHeaders }
+        );
+      }
     }
 
     // Check if already reviewed
@@ -135,7 +137,6 @@ export async function POST(request: NextRequest) {
         product_id,
         user_id: user.id,
         rating,
-        title,
         comment,
       })
       .select()

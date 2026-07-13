@@ -69,6 +69,11 @@ export type Cart = {
   created_at: string;
 };
 
+export type CartItem = Cart & {
+  saved_for_later: boolean;
+  product: Product | null;
+};
+
 export type Order = {
   id: string;
   order_number: string;
@@ -253,14 +258,16 @@ export type SupportMessage = {
   created_at: string;
 };
 
+export type NotificationType = 'order_placed' | 'order_confirmed' | 'order_shipped' | 'order_delivered' | 'order_cancelled' | 'payment_received' | 'payment_failed' | 'product_approved' | 'product_rejected' | 'seller_approved' | 'seller_rejected' | 'review_received' | 'question_received' | 'low_stock' | 'promotion' | 'newsletter' | 'system';
+
 export type Notification = {
   id: string;
   user_id: string;
   type: string;
   title: string;
   message: string;
-  data: any;
-  read: boolean;
+  metadata: Record<string, any> | null;
+  is_read: boolean;
   created_at: string;
 };
 

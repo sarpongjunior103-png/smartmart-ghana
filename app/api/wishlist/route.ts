@@ -4,7 +4,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
@@ -14,7 +14,7 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
 
     const {
       data: { user },
@@ -26,10 +26,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from('wishlist_items')
+      .from('wishlist')
       .select(
         `id, created_at,
-         products(id, name, slug, price, compare_at_price, images, stock)`
+         products(id, name, slug, price, discount_price, image_url, stock, brand, rating, status)`
       )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
     const {
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     // Check if already in wishlist
     const { data: existing } = await supabase
-      .from('wishlist_items')
+      .from('wishlist')
       .select('id')
       .eq('user_id', user.id)
       .eq('product_id', product_id)
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from('wishlist_items')
+      .from('wishlist')
       .insert({
         user_id: user.id,
         product_id,
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const { searchParams } = new URL(request.url);
     const productId = searchParams.get('product_id');
     const itemId = searchParams.get('item_id');
@@ -121,7 +121,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    let query = supabase.from('wishlist_items').delete().eq('user_id', user.id);
+    let query = supabase.from('wishlist').delete().eq('user_id', user.id);
 
     if (itemId) {
       query = query.eq('id', itemId);

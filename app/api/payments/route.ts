@@ -4,7 +4,7 @@ import { getSupabaseServerClient } from '@/lib/supabase/server';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
@@ -14,7 +14,7 @@ export async function OPTIONS() {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const { searchParams } = new URL(request.url);
     const orderId = searchParams.get('order_id');
 
@@ -29,8 +29,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('payments')
-      .select('id, order_id, amount, currency, provider, method, status, reference, created_at')
-      .eq('user_id', user.id)
+      .select('id, order_id, amount, currency, provider, gateway, status, reference, phone, created_at')
       .order('created_at', { ascending: false });
 
     if (orderId) {
@@ -53,7 +52,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
     const {
@@ -65,11 +64,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    const { order_id, method, amount, currency = 'NGN' } = body;
+    const { order_id, gateway, amount, email, callback_url } = body;
 
-    if (!order_id || !method || !amount) {
+    if (!order_id || !gateway || !amount) {
       return NextResponse.json(
-        { error: 'order_id, method, and amount are required' },
+        { error: 'order_id, gateway, and amount are required' },
         { status: 400, headers: corsHeaders }
       );
     }
@@ -86,13 +85,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404, headers: corsHeaders });
     }
 
-    let provider: string;
-    let reference = `PAY-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+    const reference = `PAY-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
     let authorizationUrl: string | null = null;
+    let provider = gateway;
 
-    switch (method) {
+    switch (gateway) {
       case 'paystack': {
-        provider = 'paystack';
         const paystackKey = process.env.PAYSTACK_SECRET_KEY;
         if (!paystackKey) {
           return NextResponse.json(
@@ -107,11 +105,11 @@ export async function POST(request: NextRequest) {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            email: user.email,
+            email: email || user.email,
             amount: Math.round(amount * 100),
-            currency,
+            currency: 'GHS',
             reference,
-            callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/payments/callback`,
+            callback_url: callback_url || `${process.env.NEXT_PUBLIC_APP_URL}/payment/processing`,
           }),
         });
         const paystackData = await response.json();
@@ -119,7 +117,6 @@ export async function POST(request: NextRequest) {
         break;
       }
       case 'flutterwave': {
-        provider = 'flutterwave';
         const flutterwaveKey = process.env.FLUTTERWAVE_SECRET_KEY;
         if (!flutterwaveKey) {
           return NextResponse.json(
@@ -136,9 +133,9 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             tx_ref: reference,
             amount,
-            currency,
-            customer: { email: user.email },
-            redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/payments/callback`,
+            currency: 'GHS',
+            customer: { email: email || user.email },
+            redirect_url: callback_url || `${process.env.NEXT_PUBLIC_APP_URL}/payment/processing`,
           }),
         });
         const flutterwaveData = await response.json();
@@ -146,7 +143,6 @@ export async function POST(request: NextRequest) {
         break;
       }
       case 'hubtel': {
-        provider = 'hubtel';
         const hubtelKey = process.env.HUBTEL_SECRET_KEY;
         if (!hubtelKey) {
           return NextResponse.json(
@@ -158,7 +154,6 @@ export async function POST(request: NextRequest) {
         break;
       }
       case 'stripe': {
-        provider = 'stripe';
         const stripeKey = process.env.STRIPE_SECRET_KEY;
         if (!stripeKey) {
           return NextResponse.json(
@@ -175,11 +170,11 @@ export async function POST(request: NextRequest) {
           body: new URLSearchParams({
             'mode': 'payment',
             'line_items[0][price_data][unit_amount]': String(Math.round(amount * 100)),
-            'line_items[0][price_data][currency]': currency.toLowerCase(),
+            'line_items[0][price_data][currency]': 'ghs',
             'line_items[0][price_data][product_data][name]': order.order_number,
             'line_items[0][quantity]': '1',
-            'success_url': `${process.env.NEXT_PUBLIC_APP_URL}/payments/success`,
-            'cancel_url': `${process.env.NEXT_PUBLIC_APP_URL}/payments/cancel`,
+            'success_url': `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
+            'cancel_url': `${process.env.NEXT_PUBLIC_APP_URL}/payment/failure`,
             'client_reference_id': reference,
           }),
         });
@@ -187,9 +182,13 @@ export async function POST(request: NextRequest) {
         authorizationUrl = stripeData?.url || null;
         break;
       }
+      case 'cash_on_delivery': {
+        authorizationUrl = null;
+        break;
+      }
       default:
         return NextResponse.json(
-          { error: 'Unsupported payment method' },
+          { error: 'Unsupported payment gateway' },
           { status: 400, headers: corsHeaders }
         );
     }
@@ -199,11 +198,10 @@ export async function POST(request: NextRequest) {
       .from('payments')
       .insert({
         order_id,
-        user_id: user.id,
-        amount,
-        currency,
         provider,
-        method,
+        gateway,
+        amount,
+        currency: 'GHS',
         status: 'pending',
         reference,
       })
@@ -213,13 +211,67 @@ export async function POST(request: NextRequest) {
     if (paymentError) throw paymentError;
 
     return NextResponse.json(
-      { payment, authorization_url: authorizationUrl },
+      { payment, authorization_url: authorizationUrl, reference },
       { status: 201, headers: corsHeaders }
     );
   } catch (error) {
     console.error('Payments POST error:', error);
     return NextResponse.json(
       { error: 'Failed to initialize payment', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500, headers: corsHeaders }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabase = getSupabaseServerClient();
+    const body = await request.json();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+
+    const { payment_id, status, gateway_reference, gateway_response } = body;
+
+    if (!payment_id || !status) {
+      return NextResponse.json(
+        { error: 'payment_id and status are required' },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('payments')
+      .update({
+        status,
+        gateway_reference: gateway_reference || null,
+        gateway_response: gateway_response || null,
+      })
+      .eq('id', payment_id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // If payment is successful, update order status
+    if (status === 'success' || status === 'completed') {
+      await supabase
+        .from('orders')
+        .update({ status: 'confirmed' })
+        .eq('id', data.order_id);
+    }
+
+    return NextResponse.json({ payment: data }, { headers: corsHeaders });
+  } catch (error) {
+    console.error('Payments PATCH error:', error);
+    return NextResponse.json(
+      { error: 'Failed to update payment', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500, headers: corsHeaders }
     );
   }

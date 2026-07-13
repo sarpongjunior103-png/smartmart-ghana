@@ -28,6 +28,17 @@ export default function AdminLoginPage() {
       toast.error(error);
       return;
     }
+    // Verify the user is an admin by checking their profile
+    const { supabase } = await import('@/lib/supabase/client');
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+      if (profile?.role !== 'admin') {
+        toast.error('Access denied. Admin privileges required.');
+        await supabase.auth.signOut();
+        return;
+      }
+    }
     toast.success('Welcome, Admin');
     router.push('/admin/dashboard');
   };

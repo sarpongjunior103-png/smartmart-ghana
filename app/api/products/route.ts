@@ -23,15 +23,16 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
 
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const offset = (page - 1) * limit;
 
     let query = supabase
       .from('products')
-      .select('id, name, slug, description, price, compare_at_price, images, rating, stock, category_id, vendor_id, created_at', {
+      .select('id, name, slug, description, price, discount_price, image_url, rating, stock, category_id, vendor_id, brand, status, is_featured, review_count, tags, created_at', {
         count: 'exact',
       })
-      .eq('is_active', true);
+      .eq('status', 'published')
+      .gt('stock', 0);
 
     if (category) query = query.eq('category_id', category);
     if (vendor) query = query.eq('vendor_id', vendor);
@@ -84,10 +85,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await getSupabaseServerClient();
+    const supabase = getSupabaseServerClient();
     const body = await request.json();
 
-    // Get current user
     const {
       data: { user },
       error: authError,
@@ -97,32 +97,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
     }
 
-    // Check if user is a vendor
+    // Check if user is a vendor (vendors.id = user.id)
     const { data: vendorData, error: vendorError } = await supabase
       .from('vendors')
-      .select('id, is_active')
-      .eq('user_id', user.id)
-      .single();
+      .select('id, status')
+      .eq('id', user.id)
+      .maybeSingle();
 
-    if (vendorError || !vendorData || !vendorData.is_active) {
+    if (vendorError || !vendorData) {
       return NextResponse.json(
-        { error: 'Only active vendors can create products' },
+        { error: 'Only vendors can create products' },
         { status: 403, headers: corsHeaders }
       );
     }
 
     const {
-      name,
-      slug,
-      description,
-      price,
-      compare_at_price,
-      images,
-      category_id,
-      stock,
-      sku,
-      weight,
-      dimensions,
+      name, slug, description, price, discount_price, image_url, category_id, stock,
+      sku, brand, tags, specifications, shipping_weight, warranty, delivery_time, is_featured, status,
     } = body;
 
     if (!name || !price || !category_id) {
@@ -139,15 +130,22 @@ export async function POST(request: NextRequest) {
         slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
         description,
         price,
-        compare_at_price,
-        images,
+        discount_price,
+        image_url,
         category_id,
         vendor_id: vendorData.id,
         stock: stock || 0,
         sku,
-        weight,
-        dimensions,
-        is_active: true,
+        brand,
+        tags: tags || [],
+        specifications,
+        shipping_weight,
+        warranty,
+        delivery_time,
+        is_featured: is_featured || false,
+        status: status || 'draft',
+        rating: 0,
+        review_count: 0,
       })
       .select()
       .single();
