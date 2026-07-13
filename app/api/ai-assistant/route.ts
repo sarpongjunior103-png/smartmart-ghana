@@ -154,14 +154,12 @@ async function fetchProducts(supabase: any, message: string, opts: { limit?: num
     query = query.ilike('brand', `%${brands[0]}%`);
   }
 
-  // Keyword search
+  // Keyword search — only when no brand or category filter is active,
+  // otherwise the keyword (often the category name itself) excludes products
+  // that belong to the category but don't have the word in their name.
   if (keywords.length > 0 && brands.length === 0 && categoryKeywords.length === 0) {
     const firstKeyword = keywords[0];
     query = query.or(`name.ilike.%${firstKeyword}%,description.ilike.%${firstKeyword}%,brand.ilike.%${firstKeyword}%`);
-  } else if (keywords.length > 0) {
-    // Additional keyword filter on top of brand/category
-    const firstKeyword = keywords[0];
-    query = query.or(`name.ilike.%${firstKeyword}%,description.ilike.%${firstKeyword}%`);
   }
 
   const { data: products, error } = await query.order('rating', { ascending: false }).limit(limit);
