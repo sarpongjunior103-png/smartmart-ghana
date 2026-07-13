@@ -11,6 +11,11 @@ const nextConfig = {
     ],
     formats: ['image/avif', 'image/webp'],
   },
+  webpack: (config) => {
+    config.parallelism = 1;
+    config.cache = false;
+    return config;
+  },
   async headers() {
     return [
       {
